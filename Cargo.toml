@@ -6,7 +6,7 @@ readme = "README.md"
 
 license = "MIT"
 
-version = "0.0.5"
+version = "0.0.6"
 edition = "2021"
 
 include = ["/src"]
@@ -18,6 +18,10 @@ name = "toiletcli"
 path = "src/lib.rs"
 crate-type = ["cdylib", "lib"]
 test = true
+
+[[example]]
+name = "cat"
+path = "examples/cat.rs"
 
 [profile.release]
 opt-level = 3

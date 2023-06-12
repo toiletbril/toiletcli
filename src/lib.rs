@@ -29,7 +29,7 @@ macro_rules! static_assert {
         }
 
         const _: () = static_assertion();
-    }
+    };
 }
 
 /// Enum that contains value to be modified by `parse_flags`.
@@ -227,7 +227,7 @@ pub fn parse_flags(args: &Vec<String>, flags: &mut [Flag]) -> Result<Vec<String>
 /// let name = toiletcli::program_name_from_path(_name);
 /// assert_eq!(name, "program");
 /// ```
-pub fn program_name_from_path(path: &str) -> String {
+pub fn name_from_path(path: &str) -> String {
     for (i, c) in path.chars().rev().enumerate() {
         if DIR_CHAR.contains(c) {
             return String::from(path.split_at(path.len() - i).1);
@@ -305,40 +305,43 @@ mod tests {
     #[should_panic]
     #[cfg(debug_assertions)]
     fn parse_flags_malformed() {
-            let args_vector = vec![
-                "program".to_string(),
-            ];
+        let args_vector = vec!["program".to_string()];
 
-            let mut malformed = false;
+        let mut malformed = false;
 
-            let mut flags = vec![
-                (vec!["m"], FlagType::SimpleFlag(&mut malformed)),
-            ];
+        let mut flags = vec![(vec!["m"], FlagType::SimpleFlag(&mut malformed))];
 
-            let _ = parse_flags(&args_vector, &mut flags).unwrap();
+        let _ = parse_flags(&args_vector, &mut flags).unwrap();
     }
 
     #[test]
     #[should_panic]
     #[cfg(debug_assertions)]
     fn parse_flags_malformed_long() {
-            let args_vector = vec![
-                "program".to_string(),
-            ];
+        let args_vector = vec!["program".to_string()];
 
-            let mut malformed = false;
+        let mut malformed = false;
 
-            let mut flags = vec![
-                (vec!["-malformed"], FlagType::SimpleFlag(&mut malformed)),
-            ];
+        let mut flags = vec![(vec!["-malformed"], FlagType::SimpleFlag(&mut malformed))];
 
-            let _ = parse_flags(&args_vector, &mut flags).unwrap();
+        let _ = parse_flags(&args_vector, &mut flags).unwrap();
     }
 
     #[test]
     fn program_name() {
-        let _name = if cfg!(windows) { "toilet\\bin\\program.exe" } else { "toilet/bin/program" };
-        let name = program_name_from_path(_name);
-        assert_eq!(name, if cfg!(windows) { "program.exe" } else { "program" });
+        let _name = if cfg!(windows) {
+            "toilet\\bin\\program.exe"
+        } else {
+            "toilet/bin/program"
+        };
+        let name = name_from_path(_name);
+        assert_eq!(
+            name,
+            if cfg!(windows) {
+                "program.exe"
+            } else {
+                "program"
+            }
+        );
     }
 }
