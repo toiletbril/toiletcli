@@ -1,12 +1,12 @@
 [package]
 name = "toiletcli"
+readme = "README.md"
 authors = ["toiletbril"]
 description = "Common functions for CLI applications."
-readme = "README.md"
 
 license = "MIT"
 
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 
 include = ["/src"]
