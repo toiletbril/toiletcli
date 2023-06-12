@@ -1,0 +1,24 @@
+[package]
+name = "toiletcli"
+authors = ["toiletbril"]
+description = "Common functions for CLI applications."
+readme = "README.md"
+
+license = "MIT"
+
+version = "0.0.2"
+edition = "2021"
+
+include = ["/src"]
+keywords = ["cli", "tools", "lib"]
+categories = ["command-line-utilities", "development-tools::cargo-plugins"]
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib", "lib"]
+test = true
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
