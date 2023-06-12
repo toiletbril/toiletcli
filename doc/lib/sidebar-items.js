@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["FlagType"],"fn":["parse_flags","program_name_from_path"],"type":["Flag"]};

@@ -6,14 +6,15 @@ readme = "README.md"
 
 license = "MIT"
 
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 
 include = ["/src"]
 keywords = ["cli", "tools", "lib"]
-categories = ["command-line-utilities", "development-tools::cargo-plugins"]
+categories = ["command-line-utilities"]
 
 [lib]
+name = "toiletcli"
 path = "src/lib.rs"
 crate-type = ["cdylib", "lib"]
 test = true

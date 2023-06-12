@@ -1,3 +1,7 @@
+//! toiletcli is just a collection of common functions that I use in my CLI applications.
+
+/// Enum that contains value to be modified by `parse_flags`.
+///
 /// # Example
 /// ```rust
 /// use toiletcli::FlagType;
@@ -16,6 +20,8 @@ pub enum FlagType<'a> {
     StringFlag(&'a mut String),
 }
 
+/// Array of tuples for `parse_flags` with flag strings and value to be modified.
+///
 /// # Example
 /// ```rust
 /// use toiletcli::FlagType;
@@ -258,6 +264,6 @@ mod tests {
     fn program_name() {
         let _name = if cfg!(windows) { "toilet\\bin\\program.exe" } else { "toilet/bin/program" };
         let name = program_name_from_path(_name);
-        assert_eq!(name, "program");
+        assert_eq!(name, if cfg!(windows) { "program.exe" } else { "program" });
     }
 }
