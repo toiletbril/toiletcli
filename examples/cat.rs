@@ -2,7 +2,7 @@
 
 use std::env::args;
 use std::fs::File;
-use std::io::{stdout, BufReader, BufWriter, Read, Write};
+use std::io::{stdout, BufReader, BufWriter, Error, Read, Write};
 use std::process::ExitCode;
 
 use toiletcli::FlagType;
@@ -27,36 +27,25 @@ fn color_output(color_code: &str) {
     }
 }
 
-fn cat(file_path: &String, color: &String) -> Result<(), String> {
-    let result = File::open(&file_path);
+fn cat(file_path: &String, color: &String) -> Result<(), Error> {
+    let file = File::open(&file_path)?;
 
-    match result {
-        Ok(file) => {
-            let mut buf: [u8; 8192] = [0; 8192];
-            let mut reader = BufReader::new(file);
-            let mut writer = BufWriter::new(stdout());
+    let mut buf: [u8; 8192] = [0; 8192];
+    let mut reader = BufReader::new(file);
+    let mut writer = BufWriter::new(stdout());
 
-            if !color.is_empty() {
-                color_output(color);
-            }
-
-            while let Ok(count) = reader.read(&mut buf) {
-                if count == 0 {
-                    break;
-                }
-                if let Err(err) = writer.write_all(&buf[..count]) {
-                    return Err(format!("{}: {}", file_path, err));
-                }
-            }
-
-            if let Err(err) = writer.flush() {
-                return Err(format!("{}: {}", file_path, err));
-            }
-        }
-        Err(err) => {
-            return Err(format!("{}: {}", file_path, err))
-        }
+    if !color.is_empty() {
+        color_output(color);
     }
+
+    while let Ok(count) = reader.read(&mut buf) {
+        if count == 0 {
+            break;
+        }
+        writer.write_all(&buf[..count])?;
+    }
+
+    writer.flush()?;
 
     return Ok(());
 }
@@ -113,5 +102,6 @@ fn main() -> ExitCode {
     if !color.is_empty() {
         color_output("default");
     }
+
     ExitCode::SUCCESS
 }
