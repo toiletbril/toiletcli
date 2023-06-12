@@ -1,4 +1,4 @@
-//! toiletcli is just a collection of common functions that I use in my CLI applications.
+//! toiletcli is a collection of common functions that I use in my CLI applications.
 
 /// Directory character, which will be `"/\\"` on Windows and `"/"` on POSIX.
 ///
