@@ -1,5 +1,37 @@
 //! toiletcli is just a collection of common functions that I use in my CLI applications.
 
+/// Directory character, which will be `"/\\"` on Windows and `"/"` on POSIX.
+///
+/// # Example
+/// ```rust
+/// use toiletcli::DIR_CHAR;
+///
+/// let path = "hello/world";
+/// let mut program = String::new();
+///
+/// for (i, c) in path.chars().rev().enumerate() {
+///     if DIR_CHAR.contains(c) {
+///         program = String::from(path.split_at(path.len() - i).1);
+///     }
+/// }
+///
+/// assert_eq!(program, "world");
+/// ```
+pub const DIR_CHAR: &'static str = if cfg!(windows) { "\\/" } else { "/" };
+
+/// Assertion that will be performed on compilation.
+#[macro_export]
+macro_rules! static_assert {
+    ($cond:expr) => {
+        #[allow(dead_code)]
+        const fn static_assertion() {
+            assert!($cond);
+        }
+
+        const _: () = static_assertion();
+    }
+}
+
 /// Enum that contains value to be modified by `parse_flags`.
 ///
 /// # Example
@@ -14,7 +46,7 @@
 ///     (vec!["--help"], FlagType::SimpleFlag(&mut show_help)),
 /// ];
 /// ```
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FlagType<'a> {
     SimpleFlag(&'a mut bool),
     StringFlag(&'a mut String),
@@ -70,7 +102,7 @@ pub type Flag<'a> = (Vec<&'a str>, FlagType<'a>);
 /// use std::env::args;
 /// use toiletcli::FlagType;
 ///
-/// let mut _args = args();
+/// let mut _args = args().collect();
 ///
 /// let mut color = String::new();
 /// let mut show_help = false;
@@ -80,12 +112,25 @@ pub type Flag<'a> = (Vec<&'a str>, FlagType<'a>);
 ///     (vec!["--help"], FlagType::SimpleFlag(&mut show_help)),
 /// ];
 ///
-/// let args = toiletcli::parse_flags(&mut _args.collect(), &mut flags);
+/// let args = toiletcli::parse_flags(&_args, &mut flags);
 /// ```
 pub fn parse_flags(args: &Vec<String>, flags: &mut [Flag]) -> Result<Vec<String>, String> {
     let mut args = args.into_iter();
     let mut result: Vec<String> = vec![];
     result.reserve(args.len());
+
+    // Check flags in flag array for malformed flags in debug builds.
+    if cfg!(debug_assertions) {
+        for (flag_strings, _) in &*flags {
+            for flag in flag_strings {
+                if flag.len() > 2 {
+                    assert!(flag.starts_with("--"), "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
+                } else {
+                    assert!(flag.starts_with("-") && flag.len() == 2, "Invalid flag: '{}'. Flag should start with '-' or '--'.\nEXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
+                }
+            }
+        }
+    }
 
     while let Some(arg) = args.next() {
         let mut chars = arg.chars();
@@ -174,8 +219,6 @@ pub fn parse_flags(args: &Vec<String>, flags: &mut [Flag]) -> Result<Vec<String>
     return Ok(result);
 }
 
-const DIR_CHAR: &'static str = if cfg!(windows) { "\\/" } else { "/" };
-
 /// Gets file name from it's path.
 ///
 /// # Example
@@ -198,7 +241,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default() {
+    fn parse_flags_default() {
         let args_vector = vec![
             "program".to_string(),
             "argument_one".to_string(),
@@ -231,8 +274,6 @@ mod tests {
             (vec!["-z"], FlagType::SimpleFlag(&mut z)),
         ];
 
-        println!("{:?}", flags);
-
         let args = parse_flags(&args_vector, &mut flags).unwrap();
 
         let args_should_be = vec!["program", "argument_one", "argument_two"];
@@ -258,6 +299,40 @@ mod tests {
             (a, big_v, n, s, &long_specific, &not_used, z),
             flags_should_be
         );
+    }
+
+    #[test]
+    #[should_panic]
+    #[cfg(debug_assertions)]
+    fn parse_flags_malformed() {
+            let args_vector = vec![
+                "program".to_string(),
+            ];
+
+            let mut malformed = false;
+
+            let mut flags = vec![
+                (vec!["m"], FlagType::SimpleFlag(&mut malformed)),
+            ];
+
+            let _ = parse_flags(&args_vector, &mut flags).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    #[cfg(debug_assertions)]
+    fn parse_flags_malformed_long() {
+            let args_vector = vec![
+                "program".to_string(),
+            ];
+
+            let mut malformed = false;
+
+            let mut flags = vec![
+                (vec!["-malformed"], FlagType::SimpleFlag(&mut malformed)),
+            ];
+
+            let _ = parse_flags(&args_vector, &mut flags).unwrap();
     }
 
     #[test]
