@@ -54,54 +54,55 @@ fn main() -> ExitCode {
     let mut _args = args();
     let program_name = toiletcli::name_from_path(&_args.next().expect("Path should be provided"));
 
-    let mut color = String::new();
-    let mut show_help = false;
+    let mut show_help: bool;
+    let mut color: String;
 
-    let mut flags = vec![
-        (vec!["--colored", "-c"], FlagType::StringFlag(&mut color)),
-        (vec!["--help"], FlagType::SimpleFlag(&mut show_help)),
-    ];
+    let mut flags = toiletcli::flags!(
+        color: StringFlag,   ["--colored", "-c"],
+        show_help: BoolFlag, ["--help"]
+    );
 
     let args = toiletcli::parse_flags(&mut _args.collect(), &mut flags);
 
-    if let Ok(args) = args {
-        if show_help {
-            println!("USAGE: {} [-options] <file> [file2, file3, ...]", program_name);
-            println!("Output a file to standart output. A demo for `toiletcli` crate.");
-            println!("");
-            println!("OPTIONS: -c, --colored <color>\tColor output.");
-            println!("             --help           \tDisplay this message.");
-            return ExitCode::SUCCESS;
-        }
+    if let Err(err) = args {
+        eprintln!("{}: {}", program_name, err);
+        return ExitCode::FAILURE;
+    }
 
-        if args.len() < 1 {
-            eprintln!(
-                "{}: No path specified. Try '--help' for more information.",
-                program_name
-            );
-            return ExitCode::FAILURE;
-        }
+    let args = args.unwrap();
 
-        for arg in args.iter() {
-            match cat(arg, &color) {
-                Ok(()) => {}
-                Err(err) => {
-                    if !color.is_empty() {
-                        color_output("default");
-                    }
-                    eprintln!("{}: {}", program_name, err);
-                    return ExitCode::FAILURE;
-                }
+    if show_help {
+        println!("USAGE: {} [-options] <file> [file2, file3, ...]", program_name);
+        println!("Output a file to standart output. A demo for `toiletcli` crate.");
+        println!("");
+        println!("OPTIONS: -c, --colored <color>\tColor output.");
+        println!("             --help           \tDisplay this message.");
+        return ExitCode::SUCCESS;
+    }
+
+    if args.len() < 1 {
+        eprintln!(
+            "{}: No path specified. Try '--help' for more information.",
+            program_name
+        );
+        return ExitCode::FAILURE;
+    }
+
+    let mut code = ExitCode::SUCCESS;
+
+    for arg in args.iter() {
+        match cat(arg, &color) {
+            Ok(()) => {}
+            Err(err) => {
+                eprintln!("{}: {}", program_name, err);
+                code = ExitCode::FAILURE;
             }
         }
-    } else {
-        eprintln!("{}: {}", program_name, args.unwrap_err());
-        return ExitCode::FAILURE;
     }
 
     if !color.is_empty() {
         color_output("default");
     }
 
-    ExitCode::SUCCESS
+    code
 }
