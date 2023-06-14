@@ -24,7 +24,6 @@ fn last_word<'a>(string: &'a str) -> String {
     }
 }
 
-
 /// ASCII colors. `Display` writes foreground color.
 /// Specific methods implement colors for background and underline.
 /// Use `Style::Reset` to reset all colors and styles.
@@ -280,17 +279,16 @@ impl FromStr for BrightColor {
 /// println!("{}{}This is bold italic text!",
 ///          Style::Bold, Style::Italic);
 /// ```
-#[derive(Debug)]
+#[repr(u8)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Style {
-    None,
-    Reset,
-    Bold,
-    Faint,
-    Italic,
-    Underlined,
-    Strikethrough,
-    Concealed,
-    Inverted,
+    None          = 22,
+    Reset         = 0,
+    Bold          = 1,
+    Faint         = 2,
+    Italic        = 3,
+    Underlined    = 4,
+    Strikethrough = 9,
 }
 
 impl Default for Style {
@@ -301,18 +299,10 @@ impl Default for Style {
 
 impl Display for Style {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let code = match self {
-            Style::None          => return Ok(()),
-            Style::Reset         => "0",
-            Style::Bold          => "1",
-            Style::Faint         => "2",
-            Style::Italic        => "3",
-            Style::Underlined    => "4",
-            Style::Inverted      => "7",
-            Style::Concealed     => "8",
-            Style::Strikethrough => "9",
-        };
-        write!(f, "{}", esc_sq(String::from(code)))
+        if *self == Style::None {
+            return Ok(());
+        }
+        write!(f, "{}", esc_sq((*self as u8).to_string()))
     }
 }
 
@@ -331,8 +321,6 @@ impl FromStr for Style {
             "strikethrough" |
             "striked"       |
             "crossed"       => Ok(Style::Strikethrough),
-            "concealed"     => Ok(Style::Concealed),
-            "inverted"      => Ok(Style::Inverted),
             _ => {
                 Err(Error::new(ErrorKind::Other, format!("Unknown style '{}'.", string)))
             }
@@ -355,16 +343,16 @@ fn underline_supported() -> bool {
 
 /// Underline styles.
 /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
-#[derive(Debug)]
+#[repr(u8)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum UnderlineStyle {
-    None,
-    DefaultCompat,
-    Default,
-    Straight,
-    Double,
-    Curly,
-    Dotted,
-    Dashed,
+    None          = 24,
+    Default       = 0,
+    Straight      = 1,
+    Double        = 2,
+    Curly         = 3,
+    Dotted        = 4,
+    Dashed        = 5,
 }
 
 impl Default for UnderlineStyle {
@@ -375,17 +363,10 @@ impl Default for UnderlineStyle {
 
 impl Display for UnderlineStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let code = match self {
-            UnderlineStyle::None          => return Ok(()),
-            UnderlineStyle::DefaultCompat => "4",
-            UnderlineStyle::Default       => "4:0",
-            UnderlineStyle::Straight      => "4:1",
-            UnderlineStyle::Double        => "4:2",
-            UnderlineStyle::Curly         => "4:3",
-            UnderlineStyle::Dotted        => "4:4",
-            UnderlineStyle::Dashed        => "4:7",
-        };
-        write!(f, "{}", esc_sq(String::from(code)))
+        if *self == UnderlineStyle::None {
+            return write!(f, "{}", esc_sq("24".to_string()));
+        }
+        write!(f, "{}", esc_sq(format!("4:{}", (*self as u8))))
     }
 }
 
@@ -502,9 +483,9 @@ mod tests {
         my_style
             .set_bg(&BrightColor::Black)
             .add_style(Style::Italic)
-            .add_style(Style::Underlined);
+            .add_style(Style::Strikethrough);
 
-        println!("{}This is underlined and italic text on bright black background!{}", my_style, Style::Reset);
+        println!("{}This is striked and italic text on bright black background!{}", my_style, Style::Reset);
     }
 
     #[test]
