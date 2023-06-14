@@ -1,5 +1,5 @@
 //! Tools for ASCII terminal colors.
-//! Contains enums that implement `Display` trait.
+//! Contains enums that all implement `Display` and `FromStr` traits.
 
 use crate::common::is_underline_style_supported;
 
@@ -37,10 +37,12 @@ pub trait PrintableColor {
     /// Returns underline escape sequence for this color.
     /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
     fn underline(&self) -> String;
+    /// Converts this color to 8-bit color.
     fn byte(&self) -> u8;
 }
 
 /// ASCII colors. `Display` writes foreground color.
+/// Includes `Color::RGB(u8, u8, u8)` and `Color::Byte(u8)` which reprent RGB colors and 8-bit colors.
 /// This implements `PrintableColor` methods, which also return colors for background and underline.
 /// Use `Style::Reset` to reset all colors and styles.
 ///
@@ -72,7 +74,9 @@ pub enum Color {
     BrightPurple = 13,
     BrightCyan   = 14,
     BrightWhite  = 15,
+    /// 8-bit color.
     Byte(u8),
+    /// RGB color.
     RGB(u8, u8, u8)
 }
 
@@ -82,6 +86,7 @@ impl Default for Color {
     }
 }
 
+/// Convert RGB color to closest 8-bit color.
 #[inline(always)]
 pub fn rgb_to_byte(r: u8, g: u8, b: u8) -> u8 {
     (16 + ((r as u32 * 6 / 256) * 36) + ((g as u32 * 6 / 256) * 6) + (b as u32 * 6 / 256)) as u8
@@ -491,29 +496,5 @@ mod tests {
         assert_eq!(Color::RGB(255, 0, 0).byte(), 196);
         assert_eq!(Color::RGB(0, 255, 0).byte(), 46);
         assert_eq!(Color::RGB(0, 0, 255).byte(), 21);
-    }
-
-    #[test]
-    fn many_styles() {
-        println!("{}Red text!{}",
-                 Color::Red, Style::Reset);
-
-        println!("{}{}{}Italic bold cyan text!{}",
-                 Style::Italic, Style::Bold, Color::Cyan, Style::Reset);
-
-        let mut warning = TerminalStyle::new();
-        warning
-            .foreground(Color::BrightBlack)
-            .background(Color::Red)
-            .add_style(Style::Bold);
-
-        let mut warning_message = TerminalStyle::new();
-        warning_message
-            .foreground(Color::Purple)
-            .add_style(Style::Underlined)
-            .underline_style(UnderlineStyle::Curly);
-
-        println!("{}Bold bright black on red:{} {}Underlined curly purple!{}",
-                 warning, Style::Reset, warning_message, Style::Reset);
     }
 }

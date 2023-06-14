@@ -57,6 +57,19 @@ fn main() -> () {
         Style::Reset
     );
 
+    println!("{}{}This is red text on blue background!{}",
+         Color::Red, Color::Blue.background(), Style::Reset);
+
+    let mut weird = TerminalStyle::new();
+    weird
+        .foreground(Color::Byte(93))
+        .add_style(Style::Underlined)
+        .underline_color(Color::RGB(0, 255, 0))
+        .underline_style(UnderlineStyle::Curly);
+
+    println!("{}Purple with curly green underline!{}",
+            warning_message, Style::Reset);
+
     println!("{}{}Pink 256 color!{}", Color::Black, Color::Byte(218).background(), Style::Reset);
 
     println!("{}True red color{}", Color::RGB(255, 0, 0), Style::Reset);

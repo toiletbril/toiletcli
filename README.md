@@ -3,7 +3,7 @@
 A collection of common functions that I use in my CLI applications.
 This is another I-use-the-language-for-the-first-time repo (and I had a lot of fun with Rust so far).
 
-## `pub mod flags`;
+## `pub mod flags;`
 ```rust
 //! Utilities for command line flags parsing.
 
@@ -23,7 +23,7 @@ let mut flags = flags!(
 let args = parse_flags(&mut args(), &mut flags);
 ```
 
-## `pub mod colors`;
+## `pub mod colors;`
 
 ```rust
 //! Tools for ASCII terminal colors.
@@ -32,10 +32,21 @@ let args = parse_flags(&mut args(), &mut flags);
 use toiletcli::colors::Color;
 use toiletcli::colors::PrintableColor;
 
-println!("{}{}This is red text on blue background!", Color::Red, Color::Blue.background());
+println!("{}{}This is red text on blue background!{}",
+         Color::Red, Color::Blue.background(), Style::Reset);
+
+let mut weird = TerminalStyle::new();
+weird
+    .foreground(Color::Byte(93))
+    .add_style(Style::Underlined)
+    .underline_color(Color::RGB(0, 255, 0))
+    .underline_style(UnderlineStyle::Curly);
+
+println!("{}Purple with curly green underline!{}",
+        weird, Style::Reset);
 ```
 
-## `pub mod common`;
+## `pub mod common;`;
 ```rust
 //! Common modules and functions.
 
