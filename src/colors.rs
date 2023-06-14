@@ -3,6 +3,7 @@
 // TODO:
 // - 256 colors
 // - dyn looks scary
+// - str methods
 
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
 
@@ -414,6 +415,8 @@ pub struct TerminalStyle<'a> {
 
 impl<'a> Display for TerminalStyle<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Style::Reset)?;
+
         write!(f, "{}", self.foreground.foreground())?;
         write!(f, "{}", self.background.background())?;
 
@@ -502,5 +505,23 @@ mod tests {
             .add_style(Style::Underlined);
 
         println!("{}This is underlined and italic text on bright black background!{}", my_style, Style::Reset);
+    }
+
+    #[test]
+    fn many_styles() {
+        let mut warning = TerminalStyle::new();
+        warning
+            .set_fg(&BrightColor::Black)
+            .set_bg(&Color::Red)
+            .add_style(Style::Bold);
+
+        let mut warning_message = TerminalStyle::new();
+        warning_message
+            .set_fg(&Color::Purple)
+            .add_style(Style::Underlined)
+            .set_underline_style(UnderlineStyle::Curly);
+
+        println!("{}Bold bright black on red:{} {}Underlined curly purple!{}",
+                 warning, Style::Reset, warning_message, Style::Reset);
     }
 }
