@@ -42,8 +42,12 @@ pub trait PrintableColor {
 }
 
 /// ASCII colors. `Display` writes foreground color.
-/// Includes `Color::RGB(u8, u8, u8)` and `Color::Byte(u8)` which reprent RGB colors and 8-bit colors.
-/// This implements `PrintableColor` methods, which also return colors for background and underline.
+/// Includes `Color::RGB(u8, u8, u8)` and `Color::Byte(u8)` which represent RGB and 8-bit colors.
+///
+/// This implements `PrintableColor` methods, which can return colors for foreground, background and underline.
+///
+/// Can be parsed from string with `from_str` or `&str.parse::<Color>()`. For example, `"21"` will be parsed as 8-bit color, and `"bright red"` (`'-'` or `'_'` can be used instead of space) will be parsed as standard colors.
+///
 /// Use `Style::Reset` to reset all colors and styles.
 ///
 /// # Example
@@ -237,19 +241,18 @@ impl FromStr for Color {
         let delimiters = "-_ ";
 
         for (index, _) in string.match_indices(|ch| { delimiters.contains(ch) }) {
-            println!("{}", string);
             if string[..index] == *"bright" {
                 return Ok(
                     match &string[index + 1..] {
-                        "none"    => Color::None,
-                        "black"   => Color::BrightBlack,
-                        "red"     => Color::BrightRed,
-                        "green"   => Color::BrightGreen,
-                        "yellow"  => Color::BrightYellow,
-                        "blue"    => Color::BrightBlue,
-                        "purple"  => Color::BrightPurple,
-                        "cyan"    => Color::BrightCyan,
-                        "white"   => Color::BrightWhite,
+                        "none"   => Color::None,
+                        "black"  => Color::BrightBlack,
+                        "red"    => Color::BrightRed,
+                        "green"  => Color::BrightGreen,
+                        "yellow" => Color::BrightYellow,
+                        "blue"   => Color::BrightBlue,
+                        "purple" => Color::BrightPurple,
+                        "cyan"   => Color::BrightCyan,
+                        "white"  => Color::BrightWhite,
                         _ => {
                             return Err(Error::new(ErrorKind::Other, format!("Unknown color '{}'.", string)))
                         }
@@ -258,17 +261,22 @@ impl FromStr for Color {
             }
         }
         Ok(match string {
-                "none"    => Color::None,
-                "black"   => Color::Black,
-                "red"     => Color::Red,
-                "green"   => Color::Green,
-                "yellow"  => Color::Yellow,
-                "blue"    => Color::Blue,
-                "purple"  => Color::Purple,
-                "cyan"    => Color::Cyan,
-                "white"   => Color::White,
+                "none"   => Color::None,
+                "black"  => Color::Black,
+                "red"    => Color::Red,
+                "green"  => Color::Green,
+                "yellow" => Color::Yellow,
+                "blue"   => Color::Blue,
+                "purple" => Color::Purple,
+                "cyan"   => Color::Cyan,
+                "white"  => Color::White,
+                "gray"   => Color::BrightBlack,
                 _ => {
-                    return Err(Error::new(ErrorKind::Other, format!("Unknown color '{}'.", string)))
+                    if let Ok(byte) = string.parse::<u8>() {
+                        Color::Byte(byte)
+                    } else {
+                        return Err(Error::new(ErrorKind::Other, format!("Unknown color '{}'.", string)))
+                    }
                 }
             }
         )

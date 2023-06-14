@@ -46,7 +46,7 @@ println!("{}Purple with curly green underline!{}",
         weird, Style::Reset);
 ```
 
-## `pub mod common;`;
+## `pub mod common;`
 ```rust
 //! Common modules and functions.
 
