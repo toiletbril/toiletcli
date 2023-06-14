@@ -14,7 +14,7 @@ fn color_output(color_code: &str) -> Result<(), Error> {
     let mut stdout = stdout();
     let color = Color::from_str(color_code)?;
 
-    print!("{}", color.foreground());
+    print!("{}", color.fg());
     stdout.flush()?;
 
     Ok(())
@@ -69,7 +69,7 @@ fn main() -> ExitCode {
         println!("Output a file to standart output. A demo for `toiletcli` crate.");
         println!("");
         println!("OPTIONS: -c, --color <color>\tColor output.");
-        println!("             --help           \tDisplay this message.");
+        println!("             --help         \tDisplay this message.");
         return ExitCode::SUCCESS;
     }
 

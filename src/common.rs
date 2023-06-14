@@ -17,20 +17,31 @@
 ///
 /// assert_eq!(program, "world");
 /// ```
-pub const DIR_CHARS: &'static str = if cfg!(windows) { "\\/" } else { "/" };
+pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 
-/// List of `TERM` enviroment variables in which underline customization is supported.
-pub const UNDERLINE_SUPPORTED_TERMINALS: [&str; 4] = ["vte", "kitty", "mintty", "iterm2"];
+static mut UNDERLINE_SUPPORTED: Option<bool> = None;
 
+// TODO: We do a bit of races
+/// Returns `true` if current terminal supports underline styling.
 pub fn is_underline_style_supported() -> bool {
-    if let Ok(terminal) = std::env::var("TERMINAL") {
-        for supported in UNDERLINE_SUPPORTED_TERMINALS {
-            if terminal.contains(supported) {
-                return true
+    unsafe {
+        if let Some(value) = UNDERLINE_SUPPORTED {
+            value
+        } else {
+            if let Ok(terminal) = std::env::var("TERMINAL") {
+                for supported in ["vte", "kitty", "mintty", "iterm2"] {
+                    if terminal.contains(supported) {
+                        UNDERLINE_SUPPORTED = Some(true);
+                        return true;
+                    }
+                }
+                false
+            } else {
+                UNDERLINE_SUPPORTED = Some(false);
+                false
             }
         }
     }
-    false
 }
 
 /// Gets file name from it's path.

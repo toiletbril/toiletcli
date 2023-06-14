@@ -4,15 +4,23 @@ use toiletcli::colors::*;
 
 fn main() -> () {
     println!("Byte of (255, 0, 0) is {:?} (should be 196)!", Color::RGB(255, 0, 0).byte());
+    assert_eq!(Color::RGB(255, 0, 0).byte(), 196);
+
+    println!("{}owo owo owo owo owo owo owo{}", Color::RGB(255, 200, 200), Style::Reset);
 
     println!("Color from 'red' is {:?}", Color::from_str("red"));
+    assert_eq!(Color::from_str("red").unwrap(), Color::Red);
+
+    println!("Color from 'bright-white' is {:?}", Color::from_str("bright-white"));
+    assert_eq!(Color::from_str("bright-white").unwrap(), Color::BrightWhite);
+    println!("{}Bright white background!{}", Color::BrightWhite.bg(), Style::Reset);
 
     println!("{}Red text!{}", Color::Red, Style::Reset);
 
     println!(
         "{}{}Blue on bright red text!{}",
         Color::Blue,
-        Color::BrightRed.background(),
+        Color::BrightRed.bg(),
         Style::Reset
     );
 
@@ -24,11 +32,11 @@ fn main() -> () {
         Style::Reset
     );
 
-    let mut my_style = TerminalStyle::new();
-    my_style
+    let my_style = StyleBuilder::new()
         .background(Color::BrightGreen)
         .add_style(Style::Italic)
-        .add_style(Style::Strikethrough);
+        .add_style(Style::Strikethrough)
+        .build();
 
     println!(
         "{}This is striked and italic text on bright green background!{}",
@@ -36,18 +44,18 @@ fn main() -> () {
         Style::Reset
     );
 
-    let mut warning = TerminalStyle::new();
-    warning
+    let warning = StyleBuilder::new()
         .foreground(Color::BrightBlack)
         .background(Color::Red)
-        .add_style(Style::Bold);
+        .add_style(Style::Bold)
+        .build();
 
-    let mut warning_message = TerminalStyle::new();
-    warning_message
+    let warning_message = StyleBuilder::new()
         .foreground(Color::Purple)
         .add_style(Style::Underlined)
         .underline_color(Color::Green)
-        .underline_style(UnderlineStyle::Curly);
+        .underline_style(UnderlineStyle::Curly)
+        .build();
 
     println!(
         "{}Bold bright black on red:{} {}Purple with curly green underline!{}",
@@ -58,27 +66,27 @@ fn main() -> () {
     );
 
     println!("{}{}This is red text on blue background!{}",
-         Color::Red, Color::Blue.background(), Style::Reset);
+         Color::Red, Color::Blue.bg(), Style::Reset);
 
-    let mut weird = TerminalStyle::new();
-    weird
+    let weird_style = StyleBuilder::new()
         .foreground(Color::Byte(93))
         .add_style(Style::Underlined)
         .underline_color(Color::RGB(0, 255, 0))
-        .underline_style(UnderlineStyle::Curly);
+        .underline_style(UnderlineStyle::Curly)
+        .build();
 
-    println!("{}Purple with curly green underline!{}",
-            warning_message, Style::Reset);
+    println!("{}RGB purple with RGB curly green underline!{}",
+            weird_style, Style::Reset);
 
-    println!("{}{}Pink 256 color!{}", Color::Black, Color::Byte(218).background(), Style::Reset);
+    println!("{}{}Pink 8-bit color!{}", Color::Black, Color::Byte(218).bg(), Style::Reset);
 
-    println!("{}True red color{}", Color::RGB(255, 0, 0), Style::Reset);
+    println!("{}RGB red color{}", Color::RGB(255, 0, 0), Style::Reset);
 
-    let mut rgb_underline = TerminalStyle::new();
-    rgb_underline
-        .foreground(Color::RGB(255, 0, 0))
+    let rgb_underline = StyleBuilder::new()
+        .foreground(Color::RGB(255, 255, 0))
         .add_style(Style::Underlined)
-        .underline_color(Color::RGB(0, 0, 255));
+        .underline_color(Color::RGB(0, 0, 255))
+        .build();
 
-    println!("{}Very red RGB color with very blue RGB underline!{}", rgb_underline, Style::Reset);
+    println!("{}Yellow RGB color with very blue RGB underline!{}", rgb_underline, Style::Reset);
 }

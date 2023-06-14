@@ -4,9 +4,9 @@
 // TODO:
 // - Parse strings for RGB colors.
 
-use crate::common::is_underline_style_supported;
-
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
+
+use crate::common::is_underline_style_supported;
 
 #[inline(always)]
 fn esc_sq(code: String) -> String {
@@ -34,12 +34,12 @@ fn esc_sq(code: String) -> String {
 /// ```
 pub trait PrintableColor {
     /// Returns foreground escape sequence for this color.
-    fn foreground(&self) -> String;
+    fn fg(&self) -> String;
     /// Returns background escape sequence for this color.
-    fn background(&self) -> String;
+    fn bg(&self) -> String;
     /// Returns underline escape sequence for this color.
     /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
-    fn underline(&self) -> String;
+    fn ul(&self) -> String;
     /// Converts this color to 8-bit color.
     fn byte(&self) -> u8;
 }
@@ -62,7 +62,7 @@ pub trait PrintableColor {
 ///          Color::Red, Color::Blue.background());
 /// ```
 #[repr(u8)]
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Color {
     None         = 255,
     Black        = 0,
@@ -102,7 +102,7 @@ pub fn rgb_to_byte(r: u8, g: u8, b: u8) -> u8 {
 impl From<Color> for u8 {
     fn from(value: Color) -> Self {
         match value {
-            Color::None         => panic!("Cant convert Color::None to u8"),
+            Color::None         => panic!("Can't convert Color::None to u8"),
             Color::Black        => 0,
             Color::Red          => 1,
             Color::Green        => 2,
@@ -215,25 +215,25 @@ impl PrintableColor for Color {
     }
 
     /// Returns foreground escape sequence for this color.
-    fn foreground(&self) -> String {
+    fn fg(&self) -> String {
         esc_sq(self.fg_code())
     }
 
     /// Returns background escape sequence for this color.
-    fn background(&self) -> String {
+    fn bg(&self) -> String {
         esc_sq(self.bg_code())
     }
 
     /// Returns underline escape sequence for this color.
     /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
-    fn underline(&self) -> String {
+    fn ul(&self) -> String {
         esc_sq(self.ul_code())
     }
 }
 
 impl Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.foreground())
+        write!(f, "{}", self.fg())
     }
 }
 
@@ -296,7 +296,7 @@ impl FromStr for Color {
 ///          Style::Bold, Style::Italic);
 /// ```
 #[repr(u8)]
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Style {
     Default       = 22,
     Reset         = 0,
@@ -344,7 +344,7 @@ impl FromStr for Style {
 /// Underline styles.
 /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum UnderlineStyle {
     None          = 0,
     Straight      = 1,
@@ -394,22 +394,10 @@ impl FromStr for UnderlineStyle {
     }
 }
 
-/// Structure with builder methods to save a specific style and colors.
+/// Structure to save a specific style and colors.
+/// Use `StyleBuilder` to construct this.
 /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
-///
-/// # Example
-/// ```rust
-/// use toiletcli::colors::*;
-///
-/// let mut my_style = TerminalStyle::new();
-/// my_style
-///     .background(Color::BrightBlack)
-///     .add_style(Style::Italic)
-///     .add_style(Style::Underlined);
-///
-/// println!("{}This is underlined and italic text on bright black background!", my_style);
-/// ```
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct TerminalStyle {
     foreground: Color,
     background: Color,
@@ -427,7 +415,7 @@ fn is_code_closed(string: &String) -> bool {
 }
 
 #[inline(always)]
-fn close_and_concat(code_string: &mut String, style: String) {
+fn close_and_concat(code_string: &mut String, style: &String) {
     if is_code_closed(code_string) {
         *code_string = format!("{}{}", code_string, style)
     } else {
@@ -439,16 +427,16 @@ impl Display for TerminalStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut code_string = String::new();
 
-        close_and_concat(&mut code_string, self.foreground.fg_code());
-        close_and_concat(&mut code_string, self.background.bg_code());
+        close_and_concat(&mut code_string, &self.foreground.fg_code());
+        close_and_concat(&mut code_string, &self.background.bg_code());
 
         for style in &self.styles {
-            close_and_concat(&mut code_string, (*style as u8).to_string());
+            close_and_concat(&mut code_string, &(*style as u8).to_string());
         }
 
         if is_underline_style_supported() {
-            close_and_concat(&mut code_string, self.underline_color.ul_code());
-            close_and_concat(&mut code_string, self.underline_style.code());
+            close_and_concat(&mut code_string, &self.underline_color.ul_code());
+            close_and_concat(&mut code_string, &self.underline_style.code());
         }
 
         let _ = write!(f, "{}", esc_sq(code_string))?;
@@ -457,43 +445,61 @@ impl Display for TerminalStyle {
     }
 }
 
-impl TerminalStyle {
+/// Builder for `TerminalStyle`.
+///
+/// # Example
+/// ```rust
+/// use toiletcli::colors::*;
+///
+/// let weird_style = StyleBuilder::new()
+///     .foreground(Color::Byte(93))
+///     .add_style(Style::Underlined)
+///     .underline_color(Color::RGB(0, 255, 0))
+///     .underline_style(UnderlineStyle::Curly)
+///     .build();
+///
+/// println!("{}RGB purple with RGB curly green underline!{}",
+///          weird_style, Style::Reset);
+/// ```
+pub struct StyleBuilder {
+    style: TerminalStyle
+}
+
+impl StyleBuilder {
     pub fn new() -> Self {
-        Default::default()
+        StyleBuilder { style: Default::default() }
     }
 
     pub fn foreground(&mut self, color: Color) -> &mut Self {
-        self.foreground = color;
+        self.style.foreground = color;
         self
     }
 
     pub fn background(&mut self, color: Color) -> &mut Self {
-        self.background = color;
+        self.style.background = color;
         self
     }
 
     /// Add a style to text. Can be used multiple times.
     pub fn add_style(&mut self, style: Style) -> &mut Self {
-        self.styles.push(style);
+        self.style.styles.push(style);
         self
     }
 
     /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
     pub fn underline_style(&mut self, underline_style: UnderlineStyle) -> &mut Self {
-        self.underline_style = underline_style;
+        self.style.underline_style = underline_style;
         self
     }
 
     /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
     pub fn underline_color(&mut self, underline_color: Color) -> &mut Self {
-        self.underline_color = underline_color;
+        self.style.underline_color = underline_color;
         self
     }
 
-    /// Clear all styles and colors.
-    pub fn clear(&mut self) -> &mut Self {
-        *self = TerminalStyle::new();
-        self
+    pub fn build(&mut self) -> TerminalStyle {
+        self.style.clone()
     }
 }
 
