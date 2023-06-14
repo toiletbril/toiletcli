@@ -1,6 +1,9 @@
 //! Tools for ASCII terminal colors.
 //! Contains enums that all implement `Display` and `FromStr` traits.
 
+// TODO:
+// - Parse strings for RGB colors.
+
 use crate::common::is_underline_style_supported;
 
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
