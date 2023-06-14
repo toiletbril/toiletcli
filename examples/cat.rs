@@ -47,8 +47,8 @@ fn main() -> ExitCode {
     let mut _args = args();
     let program_name = name_from_path(&_args.next().expect("Path should be provided"));
 
-    let mut show_help: bool;
-    let mut color: String;
+    let mut show_help;
+    let mut color;
 
     let mut flags = toiletcli::flags!(
         color: StringFlag,   ["--color", "-c"],

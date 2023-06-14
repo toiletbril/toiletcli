@@ -1,3 +1,5 @@
+//! Common modules and functions.
+
 /// Directory characters, which would be `"/\\"` on Windows and `"/"` on POSIX.
 ///
 /// # Example
@@ -16,6 +18,20 @@
 /// assert_eq!(program, "world");
 /// ```
 pub const DIR_CHARS: &'static str = if cfg!(windows) { "\\/" } else { "/" };
+
+/// List of `TERM` enviroment variables in which underline customization is supported.
+pub const UNDERLINE_SUPPORTED_TERMINALS: [&str; 4] = ["vte", "kitty", "mintty", "iterm2"];
+
+pub fn is_underline_style_supported() -> bool {
+    if let Ok(terminal) = std::env::var("TERMINAL") {
+        for supported in UNDERLINE_SUPPORTED_TERMINALS {
+            if terminal.contains(supported) {
+                return true
+            }
+        }
+    }
+    false
+}
 
 /// Gets file name from it's path.
 ///

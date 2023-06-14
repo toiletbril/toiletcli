@@ -1,4 +1,4 @@
-//! Utilities for parsing command line flags.
+//! Utilities for command line flags parsing.
 
 // TODO:
 // - Don't allocate memory if flag was not specified?
