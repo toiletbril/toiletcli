@@ -39,8 +39,8 @@ pub fn is_underline_style_supported() -> bool {
 /// ```rust
 /// use toiletcli::common;
 ///
-/// let _name = "toilet/bin/program";
-/// let name = common::name_from_path(_name);
+/// let path = "toilet/bin/program";
+/// let name = common::name_from_path(path);
 /// assert_eq!(name, "program");
 /// ```
 pub fn name_from_path(path: &str) -> String {
