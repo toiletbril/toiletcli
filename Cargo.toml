@@ -13,6 +13,9 @@ include = ["/src"]
 keywords = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
+[features]
+mock_colors = []
+
 [lib]
 name = "toiletcli"
 path = "src/lib.rs"
