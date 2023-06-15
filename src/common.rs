@@ -1,4 +1,4 @@
-//! Common modules and functions.
+//! Common functions.
 
 /// Directory characters, which would be `"/\\"` on Windows and `"/"` on POSIX.
 ///
@@ -63,7 +63,7 @@ pub fn name_from_path(path: &str) -> String {
     return String::from(path);
 }
 
-/// Assertion that will be performed on compilation.
+/// Compile time assertion.
 #[macro_export]
 macro_rules! static_assert {
     ($cond:expr) => {

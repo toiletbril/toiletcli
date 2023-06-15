@@ -1,5 +1,4 @@
-//! Tools for ASCII terminal colors.
-//! Contains enums that all implement `Display` and `FromStr` traits.
+//! ANSI terminal colors as enums that all implement `Display` and `FromStr` traits.
 
 // TODO:
 // - Parse strings for RGB colors.
@@ -21,8 +20,7 @@ fn esc_sq(code: String) -> String {
     }
 }
 
-/// Methods which return printable colors.
-/// Use `Style::Reset` to reset all colors and styles.
+/// Methods for background and underline colors.
 ///
 /// # Example
 /// ```rust
@@ -30,7 +28,7 @@ fn esc_sq(code: String) -> String {
 /// use toiletcli::colors::PrintableColor;
 ///
 /// println!("{}{}This is red text on blue background!",
-///          Color::Red, Color::Blue.background());
+///          Color::Red, Color::Blue.bg());
 /// ```
 pub trait PrintableColor {
     /// Returns foreground escape sequence for this color.
@@ -38,20 +36,18 @@ pub trait PrintableColor {
     /// Returns background escape sequence for this color.
     fn bg(&self) -> String;
     /// Returns underline escape sequence for this color.
-    /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
+    /// Underline colors will only work on supported terminals.
     fn ul(&self) -> String;
     /// Converts this color to 8-bit color.
     fn byte(&self) -> u8;
 }
 
-/// ASCII colors. `Display` writes foreground color.
-/// Includes `Color::RGB(u8, u8, u8)` and `Color::Byte(u8)` which represent RGB and 8-bit colors.
+/// ANSI, RGB, 8-bit colors. `Display` writes foreground color.
+/// Use `Style::Reset` to reset all colors and styles.
 ///
 /// This implements `PrintableColor` methods, which can return colors for foreground, background and underline.
 ///
 /// Can be parsed from string with `from_str` or `&str.parse::<Color>()`. For example, `"21"` will be parsed as 8-bit color, and `"bright red"` (`'-'` or `'_'` can be used instead of space) will be parsed as standard colors.
-///
-/// Use `Style::Reset` to reset all colors and styles.
 ///
 /// # Example
 /// ```rust
@@ -59,12 +55,14 @@ pub trait PrintableColor {
 /// use toiletcli::colors::PrintableColor;
 ///
 /// println!("{}{}This is red text on blue background!",
-///          Color::Red, Color::Blue.background());
+///          Color::Red, Color::Blue.bg());
 /// ```
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Color {
+    // Does nothing.
     None         = 255,
+    Reset        = 254,
     Black        = 0,
     Red          = 1,
     Green        = 2,
@@ -103,6 +101,7 @@ impl From<Color> for u8 {
     fn from(value: Color) -> Self {
         match value {
             Color::None         => panic!("Can't convert Color::None to u8"),
+            Color::Reset        => panic!("Can't convert Color::Reset to u8"),
             Color::Black        => 0,
             Color::Red          => 1,
             Color::Green        => 2,
@@ -153,6 +152,7 @@ impl Color {
     fn fg_code(&self) -> String {
         match self {
             Color::None         => "".to_string(),
+            Color::Reset        => "39".to_string(),
             Color::Byte(color)  => format!("38;5;{}", color),
             Color::RGB(r, g, b) => format!("38;2;{};{};{}", r, g, b),
             _ => {
@@ -170,6 +170,7 @@ impl Color {
     fn bg_code(&self) -> String {
         match self {
             Color::None         => "".to_string(),
+            Color::Reset        => "49".to_string(),
             Color::Byte(color)  => format!("48;5;{}", color),
             Color::RGB(r, g, b) => format!("48;2;{};{};{}", r, g, b),
             _ => {
@@ -187,6 +188,7 @@ impl Color {
     fn ul_code(&self) -> String {
         match self {
             Color::None         => "".to_string(),
+            Color::Reset        => "59".to_string(),
             Color::Byte(color)  => format!("58;5;{}", color),
             Color::RGB(r, g, b) => format!("58;2;{};{};{}", r, g, b),
             _                   => format!("58;5;{}", self.byte()),
@@ -225,7 +227,6 @@ impl PrintableColor for Color {
     }
 
     /// Returns underline escape sequence for this color.
-    /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
     fn ul(&self) -> String {
         esc_sq(self.ul_code())
     }
@@ -298,24 +299,34 @@ impl FromStr for Color {
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Style {
-    Default       = 22,
-    Reset         = 0,
-    Bold          = 1,
-    Faint         = 2,
-    Italic        = 3,
-    Underlined    = 4,
-    Strikethrough = 9,
+    // Does nothing.
+    None               = 255,
+    // Resets all colors and styles.
+    Reset              = 0,
+    Bold               = 1,
+    Faint              = 2,
+    Italic             = 3,
+    Underlined         = 4,
+    Strikethrough      = 9,
+    ResetBold          = 22,
+    ResetItalic        = 23,
+    ResetUnderline     = 24,
+    ResetStrikethrough = 29,
 }
 
 impl Default for Style {
     fn default() -> Self {
-        Style::Default
+        Style::None
     }
 }
 
 impl Display for Style {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", esc_sq((*self as u8).to_string()))
+        if *self != Style::None {
+            write!(f, "{}", esc_sq((*self as u8).to_string()))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -323,7 +334,7 @@ impl FromStr for Style {
     type Err = Error;
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         match string.to_lowercase().as_str() {
-            "default"       => Ok(Style::Default),
+            "default"       |
             "none"          |
             "reset"         => Ok(Style::Reset),
             "bold"          => Ok(Style::Bold),
@@ -341,12 +352,10 @@ impl FromStr for Style {
     }
 }
 
-/// Underline styles.
-/// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
+/// Underline style codes. Will not be used on incompatible terminals. Can be used via `Display`.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum UnderlineStyle {
-    None          = 0,
     Straight      = 1,
     Double        = 2,
     Curly         = 3,
@@ -368,9 +377,6 @@ impl UnderlineStyle {
 
 impl Display for UnderlineStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if *self == UnderlineStyle::None {
-            return write!(f, "{}", esc_sq("24".to_string()));
-        }
         write!(f, "{}", esc_sq(self.code()))
     }
 }
@@ -381,8 +387,6 @@ impl FromStr for UnderlineStyle {
         match string.to_lowercase().as_str() {
             "default"       |
             "straight"      => Ok(UnderlineStyle::Straight),
-            "reset"         |
-            "none"          => Ok(UnderlineStyle::None),
             "double"        => Ok(UnderlineStyle::Double),
             "curly"         => Ok(UnderlineStyle::Curly),
             "dotted"        => Ok(UnderlineStyle::Dotted),
@@ -396,7 +400,6 @@ impl FromStr for UnderlineStyle {
 
 /// Structure to save a specific style and colors.
 /// Use `StyleBuilder` to construct this.
-/// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
 #[derive(Default, Debug, Clone)]
 pub struct TerminalStyle {
     foreground: Color,
@@ -486,13 +489,13 @@ impl StyleBuilder {
         self
     }
 
-    /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
+    /// Underline colors and style will only work on supported terminals.
     pub fn underline_style(&mut self, underline_style: UnderlineStyle) -> &mut Self {
         self.style.underline_style = underline_style;
         self
     }
 
-    /// Underline colors and style will only work with `vte`, `kitty`, `mintty` or `iterm2` as TERM enviroment variable.
+    /// Underline colors and style will only work on supported terminals.
     pub fn underline_color(&mut self, underline_color: Color) -> &mut Self {
         self.style.underline_color = underline_color;
         self

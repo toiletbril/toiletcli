@@ -1,4 +1,9 @@
-//! toiletcli is a collection of common functions that I use in my CLI applications.
+//! Light framework for command line applications.
+//!
+//! This crate contains examples for each module and a demo `cat` program, which can be built/run with:
+//! ```console
+//! $ cargo run --example <cat/flags/colors>
+//! ```
 
 #[cfg(feature = "colors")]
 pub mod colors;

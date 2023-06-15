@@ -31,8 +31,12 @@ name = "cat"
 path = "examples/cat.rs"
 
 [[example]]
-name = "color"
-path = "examples/color.rs"
+name = "colors"
+path = "examples/colors.rs"
+
+[[example]]
+name = "flags"
+path = "examples/flags.rs"
 
 [profile.release]
 opt-level = 3

@@ -1,4 +1,4 @@
-//! A demo of `toiletcli`, `cat` program.
+//! A demo, `cat` program.
 
 use std::{env::args, str::FromStr};
 use std::fs::File;

@@ -1,4 +1,4 @@
-//! Utilities for command line flags parsing.
+//! Command line flag parsing.
 
 // TODO:
 // - Don't allocate memory if flag was not specified?
@@ -29,6 +29,10 @@ pub enum FlagType<'a> {
 }
 
 /// A pair with a value to be modified and flag aliases.
+///
+/// Short flags are two letter flags starting with one dash (`-n`).
+/// Long flags are flags starting with two dashes (`--help`).
+/// You can combine short `BoolFlag` flags, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 ///
 /// # Example
 /// ```rust
@@ -83,10 +87,6 @@ macro_rules! flags {
 
 /// Consumes and parses CLI arguments from `Iterator<String>`.
 ///
-/// Short flags are two letter flags starting with one dash (`-n`).
-/// Long flags are flags starting with two dashes (`--help`).
-/// You can combine short `SimpleFlag` flags, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
-/// **Short flags that use `StringFlag` can't be combined.**
 /// # Returns
 /// ## Ok
 /// All arguments that are not flags.
@@ -121,14 +121,16 @@ where Args: Iterator<Item = String> {
     if cfg!(debug_assertions) {
         for (_, flag_strings) in &*flags {
             for flag in flag_strings {
+                assert!(!flag.contains(" "),
+                        "Invalid flag: '{}'. Flag aliases should not contain spaces. EXAMPLE: '--help', '-h'", flag);
+                assert!(flag.len() >= 2,
+                        "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'.", flag);
                 if flag.len() > 2 {
                     assert!(flag.starts_with("--"),
-                            "Invalid long flag: '{}'. Long flags should start with '--'.\n
-                            EXAMPLE: '--help', '--color'", flag);
+                            "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
                 } else {
-                    assert!(flag.starts_with("-") && flag.len() == 2,
-                            "Invalid flag: '{}'. Flag should start with '-' or '--'.\n
-                            EXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
+                    assert!(flag.starts_with("-"),
+                            "Invalid flag: '{}'. Flag should start with '-' or '--'. EXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
                 }
             }
         }

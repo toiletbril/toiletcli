@@ -1,19 +1,52 @@
+//! `colors` module usage showcase.
+
 use std::str::FromStr;
 
 use toiletcli::colors::*;
+use toiletcli::common::is_underline_style_supported;
 
 fn main() -> () {
-    println!("Byte of (255, 0, 0) is {:?} (should be 196)!", Color::RGB(255, 0, 0).byte());
+    println!(
+        "{}{}YOUR TERMINAL {} UNDERLINE STYLING!{}",
+        if is_underline_style_supported() {
+            Color::BrightGreen
+        } else {
+            Color::BrightRed
+        },
+        Style::Bold,
+        if is_underline_style_supported() {
+            "SUPPORTS"
+        } else {
+            "DOES NOT SUPPORT"
+        },
+        Style::Reset
+    );
+
+    println!(
+        "Byte of (255, 0, 0) is {:?} (should be 196)!",
+        Color::RGB(255, 0, 0).byte()
+    );
     assert_eq!(Color::RGB(255, 0, 0).byte(), 196);
 
-    println!("{}owo owo owo owo owo owo owo{}", Color::RGB(255, 200, 200), Style::Reset);
+    println!(
+        "{}owo owo owo owo owo owo owo{}",
+        Color::RGB(255, 200, 200),
+        Style::Reset
+    );
 
     println!("Color from 'red' is {:?}", Color::from_str("red"));
     assert_eq!(Color::from_str("red").unwrap(), Color::Red);
 
-    println!("Color from 'bright-white' is {:?}", Color::from_str("bright-white"));
+    println!(
+        "Color from 'bright-white' is {:?}",
+        Color::from_str("bright-white")
+    );
     assert_eq!(Color::from_str("bright-white").unwrap(), Color::BrightWhite);
-    println!("{}Bright white background!{}", Color::BrightWhite.bg(), Style::Reset);
+    println!(
+        "{}Bright white background!{}",
+        Color::BrightWhite.bg(),
+        Style::Reset
+    );
 
     println!("{}Red text!{}", Color::Red, Style::Reset);
 
@@ -65,20 +98,33 @@ fn main() -> () {
         Style::Reset
     );
 
-    println!("{}{}This is red text on blue background!{}",
-         Color::Red, Color::Blue.bg(), Style::Reset);
+    println!(
+        "{}{}This is red text on blue background!{}",
+        Color::Red,
+        Color::Blue.bg(),
+        Style::Reset
+    );
 
     let weird_style = StyleBuilder::new()
         .foreground(Color::Byte(93))
+        .background(Color::from_str("black").unwrap())
         .add_style(Style::Underlined)
         .underline_color(Color::RGB(0, 255, 0))
         .underline_style(UnderlineStyle::Curly)
         .build();
 
-    println!("{}RGB purple with RGB curly green underline!{}",
-            weird_style, Style::Reset);
+    println!(
+        "{}RGB purple on black background with RGB curly green underline!{}",
+        weird_style,
+        Style::Reset
+    );
 
-    println!("{}{}Pink 8-bit color!{}", Color::Black, Color::Byte(218).bg(), Style::Reset);
+    println!(
+        "{}{}Pink 8-bit color!{}",
+        Color::Black,
+        Color::Byte(218).bg(),
+        Style::Reset
+    );
 
     println!("{}RGB red color{}", Color::RGB(255, 0, 0), Style::Reset);
 
@@ -88,5 +134,30 @@ fn main() -> () {
         .underline_color(Color::RGB(0, 0, 255))
         .build();
 
-    println!("{}Yellow RGB color with very blue RGB underline!{}", rgb_underline, Style::Reset);
+    println!(
+        "{}Yellow RGB color with very blue RGB underline!{}",
+        rgb_underline,
+        Style::Reset
+    );
+
+    let italic = StyleBuilder::new()
+        .foreground(Color::White)
+        .add_style(Style::Italic)
+        .build();
+
+    println!(
+        "{}This is white and italic! And {}THIS{} was not italic!{}",
+        italic,
+        Style::ResetItalic,
+        Style::Italic,
+        Style::Reset
+    );
+
+    println!(
+        "{}This is also white and italic! And {}THIS{} was not white!{}",
+        italic,
+        Color::Reset,
+        Color::White,
+        Style::Reset
+    );
 }

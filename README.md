@@ -1,11 +1,17 @@
 # toiletcli
 
-A collection of common functions that I use in my CLI applications.
-This is another I-use-the-language-for-the-first-time repo (and I had a lot of fun with Rust so far).
+Light framework for command line applications.
+This is I-use-the-language-for-the-first-time project (I had a lot of fun with Rust so far).
+
+This crate contains examples for each module and a demo `cat` program, which can be built/run with:
+```console
+$ cargo run --example <cat/flags/colors>
+```
 
 ## `pub mod flags;`
+
 ```rust
-//! Utilities for command line flags parsing.
+//! Command line flag parsing.
 
 use std::env::args;
 
@@ -26,29 +32,29 @@ let args = parse_flags(&mut args(), &mut flags);
 ## `pub mod colors;`
 
 ```rust
-//! Tools for ASCII terminal colors.
-//! Contains enums that implement `Display` trait.
+//! ANSI terminal colors as enums that all implement `Display` and `FromStr` traits.
 
 use toiletcli::colors::Color;
 use toiletcli::colors::PrintableColor;
 
 println!("{}{}This is red text on blue background!{}",
-         Color::Red, Color::Blue.background(), Style::Reset);
+         Color::Red, Color::Blue.bg(), Style::Reset);
 
-let mut weird = TerminalStyle::new();
-weird
-    .foreground(Color::Byte(93))
-    .add_style(Style::Underlined)
-    .underline_color(Color::RGB(0, 255, 0))
-    .underline_style(UnderlineStyle::Curly);
+    let weird_style = StyleBuilder::new()
+        .foreground(Color::Byte(93))
+        .background(Color::from_str("black").unwrap())
+        .add_style(Style::Underlined)
+        .underline_color(Color::RGB(0, 255, 0))
+        .underline_style(UnderlineStyle::Curly)
+        .build();
 
-println!("{}Purple with curly green underline!{}",
-        weird, Style::Reset);
+    println!("{}RGB purple on black background with RGB curly green underline!{}",
+            weird_style, Style::Reset);
 ```
 
 ## `pub mod common;`
 ```rust
-//! Common modules and functions.
+//! Common functions.
 
 use toiletcli::common;
 
