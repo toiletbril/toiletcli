@@ -40,16 +40,16 @@ use toiletcli::colors::PrintableColor;
 println!("{}{}This is red text on blue background!{}",
          Color::Red, Color::Blue.bg(), Style::Reset);
 
-    let weird_style = StyleBuilder::new()
-        .foreground(Color::Byte(93))
-        .background(Color::from_str("black").unwrap())
-        .add_style(Style::Underlined)
-        .underline_color(Color::RGB(0, 255, 0))
-        .underline_style(UnderlineStyle::Curly)
-        .build();
+let weird_style = StyleBuilder::new()
+    .foreground(Color::Byte(93))
+    .background(Color::from_str("black").unwrap())
+    .add_style(Style::Underlined)
+    .underline_color(Color::RGB(0, 255, 0))
+    .underline_style(UnderlineStyle::Curly)
+    .build();
 
-    println!("{}RGB purple on black background with RGB curly green underline!{}",
-            weird_style, Style::Reset);
+println!("{}RGB purple on black background with RGB curly green underline!{}",
+        weird_style, Style::Reset);
 ```
 
 ## `pub mod common;`
