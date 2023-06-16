@@ -6,7 +6,7 @@ description = "Common functions for CLI applications."
 
 license = "MIT"
 
-version = "0.2.3"
+version = "0.3.0"
 edition = "2021"
 
 include = ["/src"]
@@ -14,9 +14,10 @@ keywords = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
 [features]
-default = ["colors", "flags"]
+default = ["colors", "flags", "lines"]
 colors = []
 flags = []
+lines = []
 # Replaces all colors from 'color' module with mock strings for debugging.
 mock_colors = []
 
@@ -37,6 +38,10 @@ path = "examples/colors.rs"
 [[example]]
 name = "flags"
 path = "examples/flags.rs"
+
+[[example]]
+name = "lines"
+path = "examples/lines.rs"
 
 [profile.release]
 opt-level = 3

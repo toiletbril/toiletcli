@@ -52,6 +52,20 @@ println!("{}RGB purple on black background with RGB curly green underline!{}",
         weird_style, Style::Reset);
 ```
 
+## `pub mod lines;`
+
+```rust
+//! Enums for ANSI terminal cursor manipulation that all implement `Display`.
+
+use toiletcli::lines::*;
+
+println!("This is a 'word' that will be replaced!{}bird", Cursor::Position(12));
+// This is a 'bird' that will be replaced!
+
+println!("This is a '{}dog' that will be replaced too!{}cat", Cursor::Save, Cursor::Restore);
+// This is a 'cat' that will be replaced too!
+```
+
 ## `pub mod common;`
 ```rust
 //! Common functions.

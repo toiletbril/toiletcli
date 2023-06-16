@@ -42,6 +42,12 @@ pub trait PrintableColor {
     fn byte(&self) -> u8;
 }
 
+impl Display for dyn PrintableColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fg())
+    }
+}
+
 /// ANSI, RGB, 8-bit colors. `Display` writes foreground color.
 /// Use `Style::Reset` to reset all colors and styles.
 ///
@@ -100,8 +106,8 @@ pub fn rgb_to_byte(r: u8, g: u8, b: u8) -> u8 {
 impl From<Color> for u8 {
     fn from(value: Color) -> Self {
         match value {
-            Color::None         => panic!("Can't convert Color::None to u8"),
-            Color::Reset        => panic!("Can't convert Color::Reset to u8"),
+            Color::None         |
+            Color::Reset        => panic!("Can't convert {:?} to u8", value),
             Color::Black        => 0,
             Color::Red          => 1,
             Color::Green        => 2,
