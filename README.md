@@ -3,9 +3,9 @@
 Minimal framework for command line applications.
 This is I-use-the-language-for-the-first-time project (I had a lot of fun with Rust so far).
 
-This crate contains examples for each module and a demo `cat` program, which can be built/run with:
+This crate contains examples and a demo `cat` program, which can be built/run with:
 ```console
-$ cargo run --example <cat/flags>
+$ cargo run --example <...>
 ```
 
 ## `pub mod flags;`
