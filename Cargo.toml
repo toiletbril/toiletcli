@@ -3,21 +3,17 @@ name    = "toiletcli"
 readme  = "README.md"
 authors = ["toiletbril"]
 license = "MIT"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
-description = "Common functions for CLI applications."
+description = "Minimal framework for command line applications."
 
 include    = ["/src"]
 keywords   = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
 [features]
-default = ["flags", "ansi"]
-ansi    = []
-flags   = []
-# Replaces all colors from 'color' module with mock strings for debugging.
-mock_codes = []
+default = []
 
 [lib]
 name = "toiletcli"
@@ -30,16 +26,8 @@ name = "cat"
 path = "examples/cat.rs"
 
 [[example]]
-name = "colors"
-path = "examples/colors.rs"
-
-[[example]]
 name = "flags"
 path = "examples/flags.rs"
-
-[[example]]
-name = "lines"
-path = "examples/lines.rs"
 
 [profile.release]
 opt-level = 3

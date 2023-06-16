@@ -26,6 +26,8 @@ pub enum FlagType<'a> {
     StringFlag(&'a mut String),
     /// Will include all values specified, even if this flag was used multiple times.
     ManyFlag(&'a mut Vec<String>),
+    /// Will include everything after that flag.
+    EverythingAfterFlag(&'a mut Vec<String>),
 }
 
 /// A pair with a value to be modified and flag aliases.
@@ -178,6 +180,14 @@ where Args: Iterator<Item = String> {
                                         return Err(format!("No value provided for '{}'", flag));
                                     }
                                 }
+                                FlagType::EverythingAfterFlag(value) => {
+                                    while let Some(next_arg) = args.next() {
+                                        value.push(next_arg.clone());
+                                    }
+                                    if value.is_empty() {
+                                        return Err(format!("No value provided for '{}'", flag));
+                                    }
+                                }
                             }
                         }
                     }
@@ -219,6 +229,17 @@ where Args: Iterator<Item = String> {
                                     value.push(next_arg.clone());
                                     first = Some(ch);
                                 } else {
+                                    return Err(format!("No value provided for '{}'", flag));
+                                }
+                            }
+                            FlagType::EverythingAfterFlag(value) => {
+                                if first != None {
+                                    return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
+                                }
+                                while let Some(next_arg) = args.next() {
+                                    value.push(next_arg.clone());
+                                }
+                                if value.is_empty() {
                                     return Err(format!("No value provided for '{}'", flag));
                                 }
                             }

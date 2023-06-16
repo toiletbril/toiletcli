@@ -2,22 +2,30 @@
 
 use std::fs::File;
 use std::process::ExitCode;
-use std::{env::args, str::FromStr};
+use std::{env::args};
 use std::io::{stdout, BufReader, BufWriter, Error, Read, Write};
 
 use toiletcli::flags::*;
 use toiletcli::common::*;
-use toiletcli::ansi::*;
 
 #[inline(always)]
-fn color_output(color_code: &str) -> Result<(), Error> {
-    let mut stdout = stdout();
-    let color = Color::from_str(color_code)?;
-
-    print!("{}", color.fg());
-    stdout.flush()?;
-
-    Ok(())
+fn color_output(color_code: &str) {
+    match color_code.to_lowercase().as_str() {
+        "default" => color_output("0"),
+        "black"   => color_output("30"),
+        "red"     => color_output("31"),
+        "green"   => color_output("32"),
+        "yellow"  => color_output("33"),
+        "blue"    => color_output("34"),
+        "purple"  => color_output("35"),
+        "cyan"    => color_output("36"),
+        "white"   => color_output("37"),
+        _ => {
+            let mut stdout = stdout();
+            print!("\u{001b}[{}m", color_code);
+            stdout.flush().expect("Should be able to flush");
+        }
+    }
 }
 
 fn cat(file_path: &String, color: &String) -> Result<(), Error> {
@@ -28,7 +36,7 @@ fn cat(file_path: &String, color: &String) -> Result<(), Error> {
     let mut writer = BufWriter::new(stdout());
 
     if !color.is_empty() {
-        color_output(color)?;
+        color_output(color);
     }
 
     while let Ok(count) = reader.read(&mut buf) {

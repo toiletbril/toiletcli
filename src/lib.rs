@@ -6,9 +6,4 @@
 //! ```
 
 pub mod common;
-
-#[cfg(feature = "ansi")]
-pub mod ansi;
-
-#[cfg(feature = "flags")]
 pub mod flags;
