@@ -1,4 +1,4 @@
-//! ANSI terminal colors as enums that all implement `Display` and `FromStr` traits.
+//! ANSI terminal colors.
 
 // TODO:
 // - Parse strings for RGB colors.
@@ -10,8 +10,8 @@ use crate::common::is_underline_style_supported;
 #[inline(always)]
 fn esc_sq(code: String) -> String {
     if code.len() != 0 {
-        if cfg!(feature = "mock_colors") {
-            format!("{{color code {}}}", code)
+        if cfg!(feature = "mock_codes") {
+            format!("{{code {}}}", code)
         } else {
             format!("\u{001b}[{}m", code)
         }
@@ -20,51 +20,19 @@ fn esc_sq(code: String) -> String {
     }
 }
 
-/// Methods for background and underline colors.
-///
-/// # Example
-/// ```rust
-/// use toiletcli::colors::Color;
-/// use toiletcli::colors::PrintableColor;
-///
-/// println!("{}{}This is red text on blue background!",
-///          Color::Red, Color::Blue.bg());
-/// ```
-pub trait PrintableColor {
-    /// Returns foreground escape sequence for this color.
-    fn fg(&self) -> String;
-    /// Returns background escape sequence for this color.
-    fn bg(&self) -> String;
-    /// Returns underline escape sequence for this color.
-    /// Underline colors will only work on supported terminals.
-    fn ul(&self) -> String;
-    /// Converts this color to 8-bit color.
-    fn byte(&self) -> u8;
-}
-
-impl Display for dyn PrintableColor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.fg())
-    }
-}
-
 /// ANSI, RGB, 8-bit colors. `Display` writes foreground color.
-/// Use `Style::Reset` to reset all colors and styles.
-///
-/// This implements `PrintableColor` methods, which can return colors for foreground, background and underline.
 ///
 /// Can be parsed from string with `from_str` or `&str.parse::<Color>()`. For example, `"21"` will be parsed as 8-bit color, and `"bright red"` (`'-'` or `'_'` can be used instead of space) will be parsed as standard colors.
 ///
 /// # Example
 /// ```rust
 /// use toiletcli::colors::Color;
-/// use toiletcli::colors::PrintableColor;
 ///
 /// println!("{}{}This is red text on blue background!",
 ///          Color::Red, Color::Blue.bg());
 /// ```
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Color {
     // Does nothing.
     None         = 255,
@@ -97,9 +65,8 @@ impl Default for Color {
     }
 }
 
-/// Convert RGB color to closest 8-bit color.
 #[inline(always)]
-pub fn rgb_to_byte(r: u8, g: u8, b: u8) -> u8 {
+fn rgb_to_byte(r: u8, g: u8, b: u8) -> u8 {
     (16 + ((r as u32 * 6 / 256) * 36) + ((g as u32 * 6 / 256) * 6) + (b as u32 * 6 / 256)) as u8
 }
 
@@ -202,9 +169,9 @@ impl Color {
     }
 }
 
-impl PrintableColor for Color {
+impl Color {
     /// Returns color byte that is closest to this color.
-    fn byte(&self) -> u8 {
+    pub fn byte(&self) -> u8 {
         match self {
             Color::Byte(byte) => *byte,
             Color::RGB(r, g, b) => {
@@ -223,17 +190,17 @@ impl PrintableColor for Color {
     }
 
     /// Returns foreground escape sequence for this color.
-    fn fg(&self) -> String {
+    pub fn fg(&self) -> String {
         esc_sq(self.fg_code())
     }
 
     /// Returns background escape sequence for this color.
-    fn bg(&self) -> String {
+    pub fn bg(&self) -> String {
         esc_sq(self.bg_code())
     }
 
     /// Returns underline escape sequence for this color.
-    fn ul(&self) -> String {
+    pub fn ul(&self) -> String {
         esc_sq(self.ul_code())
     }
 }
@@ -303,7 +270,7 @@ impl FromStr for Color {
 ///          Style::Bold, Style::Italic);
 /// ```
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Style {
     // Does nothing.
     None               = 255,
@@ -360,7 +327,7 @@ impl FromStr for Style {
 
 /// Underline style codes. Will not be used on incompatible terminals. Can be used via `Display`.
 #[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum UnderlineStyle {
     Straight      = 1,
     Double        = 2,
@@ -424,8 +391,11 @@ fn is_code_closed(string: &String) -> bool {
 }
 
 #[inline(always)]
-fn close_and_concat(code_string: &mut String, style: &String) {
-    if is_code_closed(code_string) {
+fn concat_codes(code_string: &mut String, style: &String) {
+    if style.is_empty() {
+        ()
+    }
+    else if is_code_closed(code_string) {
         *code_string = format!("{}{}", code_string, style)
     } else {
         *code_string = format!("{};{}", code_string, style)
@@ -436,16 +406,18 @@ impl Display for TerminalStyle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut code_string = String::new();
 
-        close_and_concat(&mut code_string, &self.foreground.fg_code());
-        close_and_concat(&mut code_string, &self.background.bg_code());
+        concat_codes(&mut code_string, &self.foreground.fg_code());
+        concat_codes(&mut code_string, &self.background.bg_code());
 
         for style in &self.styles {
-            close_and_concat(&mut code_string, &(*style as u8).to_string());
+            concat_codes(&mut code_string, &(*style as u8).to_string());
         }
 
         if is_underline_style_supported() {
-            close_and_concat(&mut code_string, &self.underline_color.ul_code());
-            close_and_concat(&mut code_string, &self.underline_style.code());
+            concat_codes(&mut code_string, &self.underline_color.ul_code());
+            if self.underline_color != Color::None {
+                concat_codes(&mut code_string, &self.underline_style.code());
+            }
         }
 
         let _ = write!(f, "{}", esc_sq(code_string))?;

@@ -1,13 +1,13 @@
 //! A demo, `cat` program.
 
-use std::{env::args, str::FromStr};
 use std::fs::File;
-use std::io::{stdout, BufReader, BufWriter, Error, Read, Write};
 use std::process::ExitCode;
+use std::{env::args, str::FromStr};
+use std::io::{stdout, BufReader, BufWriter, Error, Read, Write};
 
 use toiletcli::flags::*;
-use toiletcli::colors::*;
 use toiletcli::common::*;
+use toiletcli::ansi::*;
 
 #[inline(always)]
 fn color_output(color_code: &str) -> Result<(), Error> {

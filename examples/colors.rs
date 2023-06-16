@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use toiletcli::colors::*;
+use toiletcli::ansi::*;
 use toiletcli::common::is_underline_style_supported;
 
 fn main() -> () {
@@ -137,7 +137,7 @@ fn main() -> () {
     println!(
         "{}Yellow RGB color with very blue RGB underline!{}",
         rgb_underline,
-        Style::Reset
+        Style::Reset,
     );
 
     let italic = StyleBuilder::new()

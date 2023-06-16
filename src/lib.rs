@@ -1,4 +1,4 @@
-//! Light framework for ANSI terminal command line applications.
+//! Minimal framework for command line applications.
 //!
 //! This crate contains examples for each module and a demo `cat` program, which can be built/run with:
 //! ```console
@@ -7,9 +7,8 @@
 
 pub mod common;
 
-#[cfg(feature = "colors")]
-pub mod colors;
+#[cfg(feature = "ansi")]
+pub mod ansi;
+
 #[cfg(feature = "flags")]
 pub mod flags;
-#[cfg(feature = "lines")]
-pub mod lines;

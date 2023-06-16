@@ -1,31 +1,29 @@
 [package]
-name = "toiletcli"
-readme = "README.md"
+name    = "toiletcli"
+readme  = "README.md"
 authors = ["toiletbril"]
-description = "Common functions for CLI applications."
-
 license = "MIT"
-
 version = "0.3.0"
 edition = "2021"
 
-include = ["/src"]
-keywords = ["cli", "tools", "lib"]
+description = "Common functions for CLI applications."
+
+include    = ["/src"]
+keywords   = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
 [features]
-default = ["colors", "flags", "lines"]
-colors = []
-flags = []
-lines = []
+default = ["flags", "ansi"]
+ansi    = []
+flags   = []
 # Replaces all colors from 'color' module with mock strings for debugging.
-mock_colors = []
+mock_codes = []
 
 [lib]
 name = "toiletcli"
 path = "src/lib.rs"
-crate-type = ["cdylib", "lib"]
 test = true
+crate-type = ["cdylib", "lib"]
 
 [[example]]
 name = "cat"
