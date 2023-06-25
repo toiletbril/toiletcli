@@ -3,7 +3,7 @@ name    = "toiletcli"
 readme  = "README.md"
 authors = ["toiletbril"]
 license = "MIT"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 
 description = "Minimal framework for command line applications."

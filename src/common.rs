@@ -25,11 +25,11 @@ pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 /// ```rust
 /// use toiletcli::common;
 ///
-/// let path = "toilet/bin/program";
-/// let name = common::name_from_path(path);
+/// let path = "toilet/bin/program".to_string();
+/// let name = common::name_from_path(&path);
 /// assert_eq!(name, "program");
 /// ```
-pub fn name_from_path(path: &str) -> String {
+pub fn name_from_path(path: &String) -> String {
     for (i, c) in path.chars().rev().enumerate() {
         if DIR_CHARS.contains(c) {
             return String::from(path.split_at(path.len() - i).1);
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn program_name() {
         let path = if cfg!(windows) { "toilet\\bin\\program.exe" } else { "toilet/bin/program" };
-        let name = name_from_path(path);
+        let name = name_from_path(&path.to_string());
 
         assert_eq!(name, if cfg!(windows) { "program.exe" } else { "program" });
     }
