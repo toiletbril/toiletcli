@@ -1,6 +1,6 @@
 //! Command line flag parsing.
 
-/// Enum that contains value to be modified by ``.
+/// Enum that contains value to be modified.
 ///
 /// # Example
 /// ```rust
@@ -116,6 +116,11 @@ macro_rules! flags {
 /// ```
 pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, String>
 where Args: Iterator<Item = String> {
+
+    // TODO:
+    // prohibit combining value flags with any other flags for more clarity?
+    // currently you can combine one flag with non-value flags.
+
     let mut result: Vec<String> = vec![];
 
     // Check flags in flag array for malformed flags in debug builds.
@@ -164,11 +169,14 @@ where Args: Iterator<Item = String> {
                         if arg != *flag {
                             continue;
                         }
+
                         found_long = true;
+
                         match flag_value {
                             FlagType::BoolFlag(value) => {
                                 **value = true;
                             }
+
                             FlagType::StringFlag(value) => {
                                 if let Some(next_arg) = args.next() {
                                     **value = next_arg.clone();
@@ -176,6 +184,7 @@ where Args: Iterator<Item = String> {
                                     return Err(format!("No value provided for '{}'", flag));
                                 }
                             }
+
                             FlagType::ManyFlag(value) => {
                                 if let Some(next_arg) = args.next() {
                                     value.push(next_arg.clone());
@@ -183,9 +192,11 @@ where Args: Iterator<Item = String> {
                                     return Err(format!("No value provided for '{}'", flag));
                                 }
                             }
+
                             FlagType::RepeatFlag(value) => {
                                 **value = 1;
                             }
+
                             FlagType::EverythingAfterFlag(value) => {
                                 while let Some(next_arg) = args.next() {
                                     value.push(next_arg.clone());
@@ -219,12 +230,15 @@ where Args: Iterator<Item = String> {
                             if let Some(first) = first {
                                 return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
                             }
+
                             **value = true;
                         }
+
                         FlagType::StringFlag(value) => {
                             if first != None {
                                 return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
                             }
+
                             if let Some(next_arg) = args.next() {
                                 **value = next_arg.clone();
                                 first = Some(ch);
@@ -232,7 +246,12 @@ where Args: Iterator<Item = String> {
                                 return Err(format!("No value provided for '{}'", flag));
                             }
                         }
+
                         FlagType::RepeatFlag(value) => {
+                            if let Some(first) = first {
+                                return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
+                            }
+
                             if in_repeat == None || in_repeat == Some(ch) {
                                 **value += 1;
                             } else {
@@ -240,10 +259,12 @@ where Args: Iterator<Item = String> {
                                 **value = 1;
                             }
                         }
+
                         FlagType::ManyFlag(value) => {
                             if first != None {
                                 return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
                             }
+
                             if let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
                                 first = Some(ch);
@@ -251,13 +272,16 @@ where Args: Iterator<Item = String> {
                                 return Err(format!("No value provided for '{}'", flag));
                             }
                         }
+
                         FlagType::EverythingAfterFlag(value) => {
                             if first != None {
                                 return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
                             }
+
                             while let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
                             }
+
                             if value.is_empty() {
                                 return Err(format!("No value provided for '{}'", flag));
                             }
