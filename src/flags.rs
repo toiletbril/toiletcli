@@ -19,11 +19,11 @@ pub enum FlagType<'a> {
     /// Will change to `true` if present.
     BoolFlag(&'a mut bool),
     /// Will change to specified `value` if present, will remain unchanged if not.
-    /// `value` will always be the value from this flag's last occurence.
+    /// `value` will always be the value from that flag's last occurence.
     StringFlag(&'a mut String),
-    /// Will include all values specified, even if this flag was used multiple times.
+    /// Will include all values specified, even if that flag was used multiple times.
     ManyFlag(&'a mut Vec<String>),
-    /// Flag that remembers repeat count of letter. Long version of this flag will return 1.
+    /// Flag that remembers repeat count of letter. Long version will return 1.
     RepeatFlag(&'a mut usize),
     /// Will include everything after that flag.
     EverythingAfterFlag(&'a mut Vec<String>),
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn parse_repeat_flag() {
-        let mut argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
+        let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
         let mut args_vector = argv.iter().map(|x| x.to_string());
 
         let mut v;
