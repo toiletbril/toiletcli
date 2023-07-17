@@ -2,7 +2,7 @@
 
 use std::fs::File;
 use std::process::ExitCode;
-use std::{env::args};
+use std::env::args;
 use std::io::{stdout, BufReader, BufWriter, Error, Read, Write};
 
 use toiletcli::flags::*;

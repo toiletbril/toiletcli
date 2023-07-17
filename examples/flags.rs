@@ -10,12 +10,14 @@ fn main() -> () {
     let mut value;
     let mut small;
     let mut big;
+    let mut repeat;
 
     let mut flags = flags!(
-        files: ManyFlag,   ["--file", "-f"],
-        value: StringFlag, ["--value"],
-        big: BoolFlag,     ["--big", "-b"],
-        small: BoolFlag,   ["--small", "-s"]
+        files: ManyFlag,    ["--file", "-f"],
+        value: StringFlag,  ["--value"],
+        big: BoolFlag,      ["--big", "-b"],
+        small: BoolFlag,    ["--small", "-s"],
+        repeat: RepeatFlag, ["--repeat", "-r"]
     );
 
     let args = parse_flags(&mut args(), &mut flags);
