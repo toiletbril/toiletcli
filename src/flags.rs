@@ -398,6 +398,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_everyting_after() {
+        let argv = vec!["program", "-v", "-rr", "-e", "argument", "-file", "hello!", "-rrrr"];
+        let mut args_vector = argv.iter().map(|x| x.to_string());
+
+        let mut v;
+        let mut r;
+        let mut everything_after;
+
+        let mut flags = flags![
+            v: RepeatFlag, ["-v"],
+            r: RepeatFlag, ["-r"],
+            everything_after: EverythingAfterFlag, ["-e"]
+        ];
+
+        let args = parse_flags(&mut args_vector, &mut flags);
+
+        assert_eq!(v, 1);
+        assert_eq!(r, 2);
+        assert_eq!(everything_after,
+                   vec!["argument", "-file", "hello!", "-rrrr"].iter().map(|x| x.to_string()).collect::<Vec<_>>());
+        assert_eq!(args.unwrap(), vec!["program".to_string()]);
+    }
+
+    #[test]
     fn parse_repeat_flag() {
         let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
         let mut args_vector = argv.iter().map(|x| x.to_string());
