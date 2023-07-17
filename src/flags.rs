@@ -1,9 +1,6 @@
 //! Command line flag parsing.
 
-// TODO:
-// - Don't allocate memory if flag was not specified?
-
-/// Enum that contains value to be modified by `parse_flags`.
+/// Enum that contains value to be modified by ``.
 ///
 /// # Example
 /// ```rust
@@ -26,6 +23,8 @@ pub enum FlagType<'a> {
     StringFlag(&'a mut String),
     /// Will include all values specified, even if this flag was used multiple times.
     ManyFlag(&'a mut Vec<String>),
+    /// Flag that remembers repeat count of letter. Long version of this flag will return 1.
+    RepeatFlag(&'a mut usize),
     /// Will include everything after that flag.
     EverythingAfterFlag(&'a mut Vec<String>),
 }
@@ -147,6 +146,8 @@ where Args: Iterator<Item = String> {
         }
 
         let mut found_long = false;
+        let mut in_repeat = None;
+
         let mut first = None;
 
         while let Some(ch) = chars.next() {
@@ -160,33 +161,37 @@ where Args: Iterator<Item = String> {
             if ch == '-' {
                 for (flag_value, flag_strings) in &mut *flags {
                     for flag in flag_strings {
-                        if arg == *flag {
-                            found_long = true;
-                            match flag_value {
-                                FlagType::BoolFlag(value) => {
-                                    **value = true;
+                        if arg != *flag {
+                            continue;
+                        }
+                        found_long = true;
+                        match flag_value {
+                            FlagType::BoolFlag(value) => {
+                                **value = true;
+                            }
+                            FlagType::StringFlag(value) => {
+                                if let Some(next_arg) = args.next() {
+                                    **value = next_arg.clone();
+                                } else {
+                                    return Err(format!("No value provided for '{}'", flag));
                                 }
-                                FlagType::StringFlag(value) => {
-                                    if let Some(next_arg) = args.next() {
-                                        **value = next_arg.clone();
-                                    } else {
-                                        return Err(format!("No value provided for '{}'", flag));
-                                    }
+                            }
+                            FlagType::ManyFlag(value) => {
+                                if let Some(next_arg) = args.next() {
+                                    value.push(next_arg.clone());
+                                } else {
+                                    return Err(format!("No value provided for '{}'", flag));
                                 }
-                                FlagType::ManyFlag(value) => {
-                                    if let Some(next_arg) = args.next() {
-                                        value.push(next_arg.clone());
-                                    } else {
-                                        return Err(format!("No value provided for '{}'", flag));
-                                    }
+                            }
+                            FlagType::RepeatFlag(value) => {
+                                **value = 1;
+                            }
+                            FlagType::EverythingAfterFlag(value) => {
+                                while let Some(next_arg) = args.next() {
+                                    value.push(next_arg.clone());
                                 }
-                                FlagType::EverythingAfterFlag(value) => {
-                                    while let Some(next_arg) = args.next() {
-                                        value.push(next_arg.clone());
-                                    }
-                                    if value.is_empty() {
-                                        return Err(format!("No value provided for '{}'", flag));
-                                    }
+                                if value.is_empty() {
+                                    return Err(format!("No value provided for '{}'", flag));
                                 }
                             }
                         }
@@ -201,47 +206,60 @@ where Args: Iterator<Item = String> {
             // One letter flags go here. (eg. -aVsd)
             for (flag_value, flag_strings) in &mut *flags {
                 for flag in flag_strings {
-                    if flag.len() == 2 && ch == flag.chars().last().unwrap() {
-                        found = true;
-                        match flag_value {
-                            FlagType::BoolFlag(value) => {
-                                if let Some(first) = first {
-                                    return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
-                                }
-                                **value = true;
+                    let short_flag = flag.chars().last().unwrap();
+
+                    if flag.len() != 2 || ch != short_flag {
+                        continue;
+                    }
+
+                    found = true;
+
+                    match flag_value {
+                        FlagType::BoolFlag(value) => {
+                            if let Some(first) = first {
+                                return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
                             }
-                            FlagType::StringFlag(value) => {
-                                if first != None {
-                                    return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                                }
-                                if let Some(next_arg) = args.next() {
-                                    **value = next_arg.clone();
-                                    first = Some(ch);
-                                } else {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
+                            **value = true;
+                        }
+                        FlagType::StringFlag(value) => {
+                            if first != None {
+                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
                             }
-                            FlagType::ManyFlag(value) => {
-                                if first != None {
-                                    return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                                }
-                                if let Some(next_arg) = args.next() {
-                                    value.push(next_arg.clone());
-                                    first = Some(ch);
-                                } else {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
+                            if let Some(next_arg) = args.next() {
+                                **value = next_arg.clone();
+                                first = Some(ch);
+                            } else {
+                                return Err(format!("No value provided for '{}'", flag));
                             }
-                            FlagType::EverythingAfterFlag(value) => {
-                                if first != None {
-                                    return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                                }
-                                while let Some(next_arg) = args.next() {
-                                    value.push(next_arg.clone());
-                                }
-                                if value.is_empty() {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
+                        }
+                        FlagType::RepeatFlag(value) => {
+                            if in_repeat == None || in_repeat == Some(ch) {
+                                **value += 1;
+                            } else {
+                                in_repeat = Some(ch);
+                                **value = 1;
+                            }
+                        }
+                        FlagType::ManyFlag(value) => {
+                            if first != None {
+                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
+                            }
+                            if let Some(next_arg) = args.next() {
+                                value.push(next_arg.clone());
+                                first = Some(ch);
+                            } else {
+                                return Err(format!("No value provided for '{}'", flag));
+                            }
+                        }
+                        FlagType::EverythingAfterFlag(value) => {
+                            if first != None {
+                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
+                            }
+                            while let Some(next_arg) = args.next() {
+                                value.push(next_arg.clone());
+                            }
+                            if value.is_empty() {
+                                return Err(format!("No value provided for '{}'", flag));
                             }
                         }
                     }
@@ -290,6 +308,7 @@ mod tests {
             "-aVns".to_string(),
             "--long-specific".to_string(),
             "something".to_string(),
+            "-vvvvv".to_string(),
             "--many".to_string(),
             "first".to_string(),
             "--many".to_string(),
@@ -300,6 +319,7 @@ mod tests {
         let mut a = false;
         let mut big_v = false;
         let mut n = false;
+        let mut v = 0;
         let mut s = false;
 
         let mut long_specific = String::new();
@@ -316,6 +336,7 @@ mod tests {
             (FlagType::BoolFlag(&mut s), vec!["-s"]),
             (FlagType::StringFlag(&mut long_specific), vec!["--long-specific"]),
             (FlagType::StringFlag(&mut not_used), vec!["--not-used"]),
+            (FlagType::RepeatFlag(&mut v), vec!["-v"]),
             (FlagType::BoolFlag(&mut z), vec!["-z"]),
             (FlagType::ManyFlag(&mut many), vec!["--many"]),
         ];
@@ -329,12 +350,12 @@ mod tests {
         );
         assert_eq!(
             (
-                a, big_v, n, s,
+                a, big_v, n, s, v,
                 &long_specific, &not_used, z,
                 &many
             ),
             (
-                true, true, true, true,
+                true, true, true, true, 5,
                 &"something".to_string(), &"".to_string(), false,
                 &vec!["first".to_string(), "second".to_string()]
             ),
@@ -350,6 +371,32 @@ mod tests {
                 &vec!["first".to_string(), "second".to_string()]
             ),
         );
+    }
+
+    #[test]
+    fn parse_repeat_flag() {
+        let mut argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
+        let mut args_vector = argv.iter().map(|x| x.to_string());
+
+        let mut v;
+        let mut r;
+        let mut t;
+        let mut unused;
+
+        let mut flags = flags![
+            v: RepeatFlag,      ["-v"],
+            r: RepeatFlag,      ["-r"],
+            unused: RepeatFlag, ["-u", "--unused"],
+            t: RepeatFlag,      ["-t", "--test"]
+        ];
+
+        let args = parse_flags(&mut args_vector, &mut flags);
+
+        assert_eq!(v, 4);
+        assert_eq!(r, 3);
+        assert_eq!(unused, 0);
+        assert_eq!(t, 1);
+        assert_eq!(args.unwrap(), vec!["program".to_string(), "argument".to_string()]);
     }
 
     #[test]
