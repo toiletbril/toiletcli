@@ -7,7 +7,9 @@ fn main() {
     println!("This is a '{}dog' that will be replaced too!{}cat", Cursor::Save, Cursor::Restore);
     // This is a 'cat' that will be replaced too!
 
-    print!("{}", System::SetTitle("hello"));
+    println!("Now, say hello to your terminal title!");
+
+    print!("{}", System::SetTitle("Hello! How are you?"));
 
     println!("Press CTRL-C to exit.");
 
