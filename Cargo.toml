@@ -14,7 +14,10 @@ keywords   = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
 [features]
-default = []
+default   = ["flags", "colors", "escapes"]
+colors    = []
+escapes   = []
+flags     = []
 
 [lib]
 name = "toiletcli"

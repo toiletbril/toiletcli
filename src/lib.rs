@@ -6,5 +6,9 @@
 //! ```
 
 pub mod common;
+#[cfg(feature = "flags")]
 pub mod flags;
+#[cfg(feature = "colors")]
 pub mod colors;
+#[cfg(feature = "escapes")]
+pub mod escapes;
