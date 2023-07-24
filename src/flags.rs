@@ -34,6 +34,7 @@ pub enum FlagType<'a> {
 /// Short flags are two letter flags starting with one dash (`-n`).
 /// Long flags are flags starting with two dashes (`--help`).
 /// You can combine short `BoolFlag` flags, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+/// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
 /// ```rust
@@ -116,11 +117,6 @@ macro_rules! flags {
 /// ```
 pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, String>
 where Args: Iterator<Item = String> {
-
-    // TODO:
-    // prohibit combining value flags with any other flags for more clarity?
-    // currently you can combine one flag with non-value flags.
-
     let mut result: Vec<String> = vec![];
 
     // Check flags in flag array for malformed flags in debug builds.
@@ -217,28 +213,30 @@ where Args: Iterator<Item = String> {
             // One letter flags go here. (eg. -aVsd)
             for (flag_value, flag_strings) in &mut *flags {
                 for flag in flag_strings {
+                    if flag.len() != 2 {
+                        continue;
+                    }
+
                     let short_flag = flag.chars().last().unwrap();
 
-                    if flag.len() != 2 || ch != short_flag {
+                    if ch != short_flag {
                         continue;
                     }
 
                     found = true;
 
+                    // Don't allow combining short flags that have a value.
+                    // Combining flags without value with a single value flag is allowed.
+                    if let Some(first) = first {
+                        return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
+                    }
+
                     match flag_value {
                         FlagType::BoolFlag(value) => {
-                            if let Some(first) = first {
-                                return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
-                            }
-
                             **value = true;
                         }
 
                         FlagType::StringFlag(value) => {
-                            if first != None {
-                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                            }
-
                             if let Some(next_arg) = args.next() {
                                 **value = next_arg.clone();
                                 first = Some(ch);
@@ -248,10 +246,6 @@ where Args: Iterator<Item = String> {
                         }
 
                         FlagType::RepeatFlag(value) => {
-                            if let Some(first) = first {
-                                return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
-                            }
-
                             if in_repeat == None || in_repeat == Some(ch) {
                                 **value += 1;
                             } else {
@@ -261,10 +255,6 @@ where Args: Iterator<Item = String> {
                         }
 
                         FlagType::ManyFlag(value) => {
-                            if first != None {
-                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                            }
-
                             if let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
                                 first = Some(ch);
@@ -274,10 +264,6 @@ where Args: Iterator<Item = String> {
                         }
 
                         FlagType::EverythingAfterFlag(value) => {
-                            if first != None {
-                                return Err(format!("Flag '{}' requires a value and can't be combined.", flag));
-                            }
-
                             while let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
                             }
