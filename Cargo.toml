@@ -30,6 +30,10 @@ path = "examples/cat.rs"
 name = "flags"
 path = "examples/flags.rs"
 
+[[example]]
+name = "colors"
+path = "examples/colors.rs"
+
 [profile.release]
 opt-level = 3
 strip = true
