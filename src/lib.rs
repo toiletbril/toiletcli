@@ -7,3 +7,4 @@
 
 pub mod common;
 pub mod flags;
+pub mod colors;
