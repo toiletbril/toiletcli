@@ -126,7 +126,7 @@ where Args: Iterator<Item = String> {
                 assert!(!flag.contains(" "),
                         "Invalid flag: '{}'. Flag aliases should not contain spaces. EXAMPLE: '--help', '-h'", flag);
                 assert!(flag.len() >= 2,
-                        "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'.", flag);
+                        "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'", flag);
                 if flag.len() > 2 {
                     assert!(flag.starts_with("--"),
                             "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
@@ -228,7 +228,7 @@ where Args: Iterator<Item = String> {
                     // Don't allow combining short flags that have a value.
                     // Combining flags without value with a single value flag is allowed.
                     if let Some(first) = first {
-                        return Err(format!("Flag '-{}' requires a value and can't be combined.", first));
+                        return Err(format!("Flag '-{}' requires a value and can't be combined", first));
                     }
 
                     match flag_value {

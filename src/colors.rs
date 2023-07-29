@@ -228,7 +228,8 @@ impl FromStr for Color {
                         "cyan"   => Color::BrightCyan,
                         "white"  => Color::BrightWhite,
                         _ => {
-                            return Err(Error::new(ErrorKind::Other, format!("Unknown color '{}'.", string)))
+                            let err = Error::new(ErrorKind::Other, format!("Unknown color '{}'", string));
+                            return Err(err)
                         }
                     }
                 )
@@ -249,7 +250,8 @@ impl FromStr for Color {
                     if let Ok(byte) = string.parse::<u8>() {
                         Color::Byte(byte)
                     } else {
-                        return Err(Error::new(ErrorKind::Other, format!("Unknown color '{}'.", string)))
+                        let err = Error::new(ErrorKind::Other, format!("Unknown color '{}'", string));
+                        return Err(err)
                     }
                 }
             }
@@ -316,7 +318,8 @@ impl FromStr for Style {
             "striked"       |
             "crossed"       => Ok(Style::Strikethrough),
             _ => {
-                Err(Error::new(ErrorKind::Other, format!("Unknown style '{}'.", string)))
+                let err = Error::new(ErrorKind::Other, format!("Unknown style '{}'", string));
+                Err(err)
             }
         }
     }
@@ -362,7 +365,8 @@ impl FromStr for UnderlineStyle {
             "dotted"        => Ok(UnderlineStyle::Dotted),
             "dashed"        => Ok(UnderlineStyle::Dashed),
             _ => {
-                Err(Error::new(ErrorKind::Other, format!("Unknown underline style '{}'.", string)))
+                let err = Error::new(ErrorKind::Other, format!("Unknown underline style '{}'", string));
+                Err(err)
             }
         }
     }
