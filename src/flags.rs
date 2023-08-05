@@ -33,8 +33,8 @@ pub enum FlagType<'a> {
 ///
 /// Short flags are two letter flags starting with one dash (`-n`).
 /// Long flags are flags starting with two dashes (`--help`).
-/// 
-/// Short flags of [`BoolFlag`](type@FlagType::BoolFlag) can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+///
+/// Short flags of `BoolFlag` can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 /// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
@@ -286,9 +286,8 @@ pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<Stri
 where Args: Iterator<Item = String> {
     let mut parsed_arguments: Vec<String> = vec![];
 
-    if cfg!(debug_assertions) {
-        check_flags(&flags);
-    }
+    #[cfg(debug_assertions)]
+    check_flags(&flags);
 
     while let Some(arg) = args.next() {
         let is_flag = parse_arg(&arg, args, flags)?;
@@ -312,17 +311,17 @@ where Args: Iterator<Item = String> {
 ///
 /// ## Err
 /// - On unknown flag;
-/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
-/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
-/// 
+/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
+/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+///
 /// ### Example
 /// ```rust
 /// use std::env::args;
 /// use toiletcli::flags;
 /// use toiletcli::flags::{FlagType, parse_flags, parse_flags_until_subcommand};
-/// 
+///
 /// let mut args = args();
-/// 
+///
 /// // Most often, path to the program will be the first argument.
 /// // This will prevent the function from parsing, as path to the program does not start with '-'.
 /// let program_name = args.next().unwrap();
@@ -334,7 +333,7 @@ where Args: Iterator<Item = String> {
 /// ];
 ///
 /// let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
-/// 
+///
 /// let mut d_flag;
 ///
 /// let mut sub_flags = flags![
@@ -347,9 +346,8 @@ pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -
 where Args: Iterator<Item = String> {
     let mut subcommand = String::new();
 
-    if cfg!(debug_assertions) {
-        check_flags(&flags);
-    }
+    #[cfg(debug_assertions)]
+    check_flags(&flags);
 
     while let Some(arg) = args.next() {
         let is_flag = parse_arg(&arg, args, flags)?;
@@ -495,9 +493,9 @@ mod tests {
     fn parse_subcommands() {
         let argv = vec!["program", "-v","dump", "-d", "argument"];
         let mut args = argv.iter().map(|x| x.to_string());
-         
+
         let program_name = args.next().unwrap();
-        
+
         assert_eq!(program_name, "program".to_string());
 
         let mut v;
@@ -530,11 +528,11 @@ mod tests {
         let args_vector = vec!["program".to_string()];
 
         let mut malformed = false;
-        
+
         let mut flags = vec![
             (FlagType::BoolFlag(&mut malformed), vec!["m"])
         ];
-    
+
         let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 
@@ -543,17 +541,17 @@ mod tests {
     #[cfg(debug_assertions)]
     fn parse_flags_malformed_long() {
         let args_vector = vec!["program".to_string()];
-        
+
         let mut malformed = false;
-        
+
         let mut flags = vec![
             (FlagType::BoolFlag(&mut malformed), vec!["-onedash"])
         ];
-        
+
         let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 
-    
+
     #[test]
     #[should_panic]
     #[cfg(debug_assertions)]
