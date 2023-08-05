@@ -1,21 +1,19 @@
 # toiletcli
 
-A tiny framework for command line applications.
+A tiny framework for command line applications, including a command line
+argument parser.
 
-Each module can be disabled/enabled via default features:
+Complete overview can be found in the documentation for each module.
+
+Modules can be disabled/enabled via features:
 ```toml
 [features]
 default = ["flags", "colors", "escapes"]
 ```
 
-This crate contains examples and a demo `cat` program, which can be built/run with:
-```console
-$ cargo run --example <cat/flags/colors/escapes>
-```
+## Examples
 
-## Usage
-
-### `pub mod flags;`
+### Flags 
 ```rust
 //! Command line flag parsing.
 
@@ -35,7 +33,7 @@ let mut flags = flags!(
 let args = parse_flags(&mut args(), &mut flags);
 ```
 
-### `pub mod colors;`
+### Colors
 ```rust
 //! ANSI terminal colors as enums that all implement `Display` and `FromStr` traits.
 
@@ -56,7 +54,7 @@ println!("{}RGB purple on black background with RGB curly green underline!{}",
         weird_style, Style::Reset);
 ```
 
-### `pub mod escapes;`
+### Escapes
 ```rust
 //! Enums for ANSI terminal cursor manipulation that all implement `Display`.
 
@@ -72,7 +70,7 @@ print!("{}", System::SetTitle("hello"));
 // Look at the title :3
 ```
 
-### `pub mod common;`
+### Common
 ```rust
 //! Common functions.
 
