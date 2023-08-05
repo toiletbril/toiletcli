@@ -15,7 +15,7 @@ default = ["flags", "colors", "escapes"]
 
 ### Flags 
 ```rust
-//! Command line flag parsing.
+//! Command line argument parsing.
 
 use std::env::args;
 
@@ -35,7 +35,7 @@ let args = parse_flags(&mut args(), &mut flags);
 
 ### Colors
 ```rust
-//! ANSI terminal colors as enums that all implement `Display` and `FromStr` traits.
+//! Convenient ANSI terminal colors and styles.
 
 use toiletcli::colors::Color;
 
@@ -56,7 +56,7 @@ println!("{}RGB purple on black background with RGB curly green underline!{}",
 
 ### Escapes
 ```rust
-//! Enums for ANSI terminal cursor manipulation that all implement `Display`.
+//! Most common escapes to manipulate terminals.
 
 use toiletcli::escapes::*;
 
