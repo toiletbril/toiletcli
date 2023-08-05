@@ -13,14 +13,13 @@ default = ["flags", "colors", "escapes"]
 
 ## Examples
 
-### Flags 
 ```rust
 //! Command line argument parsing.
 
 use std::env::args;
 
 use toiletcli::flags;
-use toiletcli::flags::*;
+use toiletcli::flags::{parse_flags, FlagType, Flag};
 
 let mut color: String;
 let mut show_help: bool;
@@ -33,11 +32,10 @@ let mut flags = flags!(
 let args = parse_flags(&mut args(), &mut flags);
 ```
 
-### Colors
 ```rust
 //! Convenient ANSI terminal colors and styles.
 
-use toiletcli::colors::Color;
+use toiletcli::colors::{Color, Style, UnderlineStyle, StyleBuilder};
 
 println!("{}{}This is red text on blue background!{}",
          Color::Red, Color::Blue.bg(), Style::Reset);
@@ -54,11 +52,10 @@ println!("{}RGB purple on black background with RGB curly green underline!{}",
         weird_style, Style::Reset);
 ```
 
-### Escapes
 ```rust
 //! Most common escapes to manipulate terminals.
 
-use toiletcli::escapes::*;
+use toiletcli::escapes::{Cursor, System};
 
 println!("This is a 'word' that will be replaced!{}bird", Cursor::Position(12));
 // This is a 'bird' that will be replaced!
@@ -70,11 +67,10 @@ print!("{}", System::SetTitle("hello"));
 // Look at the title :3
 ```
 
-### Common
 ```rust
 //! Common functions.
 
-use toiletcli::common;
+use toiletcli::common::{name_from_path};
 
 let path = "toilet/bin/program";
 let name = common::name_from_path(path);
