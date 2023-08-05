@@ -87,149 +87,55 @@ macro_rules! flags {
     };
 }
 
-/// Consumes and parses CLI arguments from `Iterator<String>`.
-///
-/// # Returns
-/// ## Ok
-/// All arguments that are not flags.
-/// Changes values passed in enums to matching values from args.
-///
-/// ## Err
-/// - On unknown flag;
-/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
-/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
-///
-/// # Example
-/// ```rust
-/// use std::env::args;
-/// use toiletcli::flags;
-/// use toiletcli::flags::*;
-///
-/// let mut color = String::new();
-/// let mut show_help = false;
-///
-/// let mut flags = flags!(
-///     color: StringFlag,   ["--color", "-c"],
-///     show_help: BoolFlag, ["--help"]
-/// );
-///
-/// let args = parse_flags(&mut args(), &mut flags);
-/// ```
-pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, String>
-where Args: Iterator<Item = String> {
-    let mut result: Vec<String> = vec![];
-
-    // Check flags in flag array for malformed flags in debug builds.
-    if cfg!(debug_assertions) {
-        for (_, flag_strings) in &*flags {
-            for flag in flag_strings {
-                assert!(!flag.contains(" "),
-                        "Invalid flag: '{}'. Flag aliases should not contain spaces. EXAMPLE: '--help', '-h'", flag);
-                assert!(flag.len() >= 2,
-                        "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'", flag);
-                if flag.len() > 2 {
-                    assert!(flag.starts_with("--"),
-                            "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
-                } else {
-                    assert!(flag.starts_with("-"),
-                            "Invalid flag: '{}'. Flag should start with '-' or '--'. EXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
-                }
+// Check flags in flag array for malformed flags in debug builds.
+#[cfg(debug_assertions)]
+fn check_flags(flags: &[Flag]) {
+    for (_, flag_strings) in &*flags {
+        for flag in flag_strings {
+            assert!(!flag.contains(" "),
+            "Invalid flag: '{}'. Flag aliases should not contain spaces. EXAMPLE: '--help', '-h'", flag);
+            assert!(flag.len() >= 2,
+            "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'", flag);
+            if flag.len() > 2 {
+                assert!(flag.starts_with("--"),
+                "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
+            } else {
+                assert!(flag.starts_with("-"),
+                "Invalid flag: '{}'. Flag should start with '-' or '--'. EXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
             }
         }
     }
+}
 
-    while let Some(arg) = args.next() {
-        let mut chars = arg.chars();
+// -> Result<IsFlag, String>
+fn parse_arg<Args>(arg: &String, args: &mut Args, flags: &mut [Flag]) -> Result<bool, String>
+where Args: Iterator<Item = String> {
+    let mut chars = arg.chars();
 
-        if chars.next() != Some('-') {
-            result.push(arg.clone());
-            continue;
+    if chars.next() != Some('-') {
+        return Ok(false);
+    }
+
+    let mut found_long = false;
+    let mut in_repeat = None;
+    let mut first = None;
+
+    while let Some(ch) = chars.next() {
+        let mut found = false;
+
+        if found_long {
+            break;
         }
 
-        let mut found_long = false;
-        let mut in_repeat = None;
-
-        let mut first = None;
-
-        while let Some(ch) = chars.next() {
-            let mut found = false;
-
-            if found_long {
-                break;
-            }
-
-            // Longs flags go here.
-            if ch == '-' {
-                for (flag_value, flag_strings) in &mut *flags {
-                    for flag in flag_strings {
-                        if arg != *flag {
-                            continue;
-                        }
-
-                        found_long = true;
-
-                        match flag_value {
-                            FlagType::BoolFlag(value) => {
-                                **value = true;
-                            }
-
-                            FlagType::StringFlag(value) => {
-                                if let Some(next_arg) = args.next() {
-                                    **value = next_arg.clone();
-                                } else {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
-                            }
-
-                            FlagType::ManyFlag(value) => {
-                                if let Some(next_arg) = args.next() {
-                                    value.push(next_arg.clone());
-                                } else {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
-                            }
-
-                            FlagType::RepeatFlag(value) => {
-                                **value = 1;
-                            }
-
-                            FlagType::EverythingAfterFlag(value) => {
-                                while let Some(next_arg) = args.next() {
-                                    value.push(next_arg.clone());
-                                }
-                                if value.is_empty() {
-                                    return Err(format!("No value provided for '{}'", flag));
-                                }
-                            }
-                        }
-                    }
-                }
-                if !found_long {
-                    return Err(format!("Unknown long flag '{}'", arg));
-                }
-                break;
-            }
-
-            // One letter flags go here. (eg. -aVsd)
+        // Longs flags go here.
+        if ch == '-' {
             for (flag_value, flag_strings) in &mut *flags {
                 for flag in flag_strings {
-                    if flag.len() != 2 {
+                    if arg != *flag {
                         continue;
                     }
 
-                    let short_flag = flag.chars().last().unwrap();
-
-                    if ch != short_flag {
-                        continue;
-                    }
-
-                    found = true;
-
-                    // Don't allow combining short flags that have a value.
-                    // Combining flags without value with a single value flag is allowed.
-                    if let Some(first) = first {
-                        return Err(format!("Flag '-{}' requires a value and can't be combined", first));
-                    }
+                    found_long = true;
 
                     match flag_value {
                         FlagType::BoolFlag(value) => {
@@ -239,35 +145,27 @@ where Args: Iterator<Item = String> {
                         FlagType::StringFlag(value) => {
                             if let Some(next_arg) = args.next() {
                                 **value = next_arg.clone();
-                                first = Some(ch);
                             } else {
                                 return Err(format!("No value provided for '{}'", flag));
-                            }
-                        }
-
-                        FlagType::RepeatFlag(value) => {
-                            if in_repeat == None || in_repeat == Some(ch) {
-                                **value += 1;
-                            } else {
-                                in_repeat = Some(ch);
-                                **value = 1;
                             }
                         }
 
                         FlagType::ManyFlag(value) => {
                             if let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
-                                first = Some(ch);
                             } else {
                                 return Err(format!("No value provided for '{}'", flag));
                             }
+                        }
+
+                        FlagType::RepeatFlag(value) => {
+                            **value = 1;
                         }
 
                         FlagType::EverythingAfterFlag(value) => {
                             while let Some(next_arg) = args.next() {
                                 value.push(next_arg.clone());
                             }
-
                             if value.is_empty() {
                                 return Err(format!("No value provided for '{}'", flag));
                             }
@@ -275,14 +173,84 @@ where Args: Iterator<Item = String> {
                     }
                 }
             }
-
-            if !found {
-                return Err(format!("Unknown flag '-{}'", ch));
+            if !found_long {
+                return Err(format!("Unknown long flag '{}'", arg));
             }
+            break;
+        }
+
+        // One letter flags go here. (eg. -aVsd)
+        for (flag_value, flag_strings) in &mut *flags {
+            for flag in flag_strings {
+                if flag.len() != 2 {
+                    continue;
+                }
+
+                let short_flag = flag.chars().last().unwrap();
+
+                if ch != short_flag {
+                    continue;
+                }
+
+                found = true;
+
+                // Don't allow combining short flags that have a value.
+                // Combining flags without value with a single value flag is allowed.
+                if let Some(first) = first {
+                    return Err(format!("Flag '-{}' requires a value and can't be combined", first));
+                }
+
+                match flag_value {
+                    FlagType::BoolFlag(value) => {
+                        **value = true;
+                    }
+
+                    FlagType::StringFlag(value) => {
+                        if let Some(next_arg) = args.next() {
+                            **value = next_arg.clone();
+                            first = Some(ch);
+                        } else {
+                            return Err(format!("No value provided for '{}'", flag));
+                        }
+                    }
+
+                    FlagType::RepeatFlag(value) => {
+                        if in_repeat == None || in_repeat == Some(ch) {
+                            **value += 1;
+                        } else {
+                            in_repeat = Some(ch);
+                            **value = 1;
+                        }
+                    }
+
+                    FlagType::ManyFlag(value) => {
+                        if let Some(next_arg) = args.next() {
+                            value.push(next_arg.clone());
+                            first = Some(ch);
+                        } else {
+                            return Err(format!("No value provided for '{}'", flag));
+                        }
+                    }
+
+                    FlagType::EverythingAfterFlag(value) => {
+                        while let Some(next_arg) = args.next() {
+                            value.push(next_arg.clone());
+                        }
+
+                        if value.is_empty() {
+                            return Err(format!("No value provided for '{}'", flag));
+                        }
+                    }
+                }
+            }
+        }
+
+        if !found {
+            return Err(format!("Unknown flag '-{}'", ch));
         }
     }
 
-    return Ok(result);
+    Ok(true)
 }
 
 #[cfg(test)]
