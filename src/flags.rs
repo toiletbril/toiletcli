@@ -253,6 +253,53 @@ where Args: Iterator<Item = String> {
     Ok(true)
 }
 
+/// Consumes and parses CLI arguments from `Iterator<String>`.
+///
+/// # Returns
+/// ## Ok
+/// All arguments that are not flags.
+/// Changes values passed in enums to matching values from args.
+///
+/// ## Err
+/// - On unknown flag;
+/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
+/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+///
+/// # Example
+/// ```rust
+/// use std::env::args;
+/// use toiletcli::flags;
+/// use toiletcli::flags::{FlagType, parse_flags};
+///
+/// let mut color = String::new();
+/// let mut show_help = false;
+///
+/// let mut flags = flags!(
+///     color: StringFlag,   ["--color", "-c"],
+///     show_help: BoolFlag, ["--help"]
+/// );
+///
+/// let args = parse_flags(&mut args(), &mut flags);
+/// ```
+pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, String>
+where Args: Iterator<Item = String> {
+    let mut parsed_arguments: Vec<String> = vec![];
+
+    if cfg!(debug_assertions) {
+        check_flags(&flags);
+    }
+
+    while let Some(arg) = args.next() {
+        let is_flag = parse_arg(&arg, args, flags)?;
+
+        if !is_flag {
+            parsed_arguments.push(arg.clone());
+        }
+    }
+
+    Ok(parsed_arguments)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
