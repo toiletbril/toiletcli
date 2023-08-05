@@ -34,7 +34,7 @@ pub enum FlagType<'a> {
 /// Short flags are two letter flags starting with one dash (`-n`).
 /// Long flags are flags starting with two dashes (`--help`).
 /// 
-/// Short flags of `BoolFlag` can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+/// Short flags of [`BoolFlag`](type@FlagType::BoolFlag) can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 /// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
@@ -51,7 +51,7 @@ pub enum FlagType<'a> {
 /// ```
 pub type Flag<'a> = (FlagType<'a>, Vec<&'a str>, );
 
-/// Construct `[Flag]` variable more quickly.
+/// Construct [`[Flag]`](type@Flag) variable more quickly.
 ///
 /// # Example
 /// ```rust
@@ -254,7 +254,7 @@ where Args: Iterator<Item = String> {
     Ok(true)
 }
 
-/// Consumes and parses flags and arguments from `Iterator<String>`.
+/// Consumes and parses flags and arguments from [`Iterator<String>`](type@Iterator<String>).
 ///
 /// # Returns
 /// ## Ok
@@ -263,8 +263,8 @@ where Args: Iterator<Item = String> {
 ///
 /// ## Err
 /// - On unknown flag;
-/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
-/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
+/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
 ///
 /// # Example
 /// ```rust
@@ -312,8 +312,8 @@ where Args: Iterator<Item = String> {
 ///
 /// ## Err
 /// - On unknown flag;
-/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
-/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
+/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
 /// 
 /// ### Example
 /// ```rust

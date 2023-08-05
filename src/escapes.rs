@@ -1,4 +1,5 @@
 //! Most common escapes to manipulate terminals.
+//! All enums implement [`Display`] trait.
 
 use std::fmt::Display;
 
