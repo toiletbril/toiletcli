@@ -1,4 +1,4 @@
-//! ANSI terminal colors.
+//! Convenient ANSI terminal colors and styles.
 
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
 

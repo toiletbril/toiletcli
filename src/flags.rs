@@ -1,4 +1,4 @@
-//! Command line flag parsing.
+//! Command line argument parsing.
 
 /// Enum that contains value to be modified.
 ///
@@ -33,7 +33,8 @@ pub enum FlagType<'a> {
 ///
 /// Short flags are two letter flags starting with one dash (`-n`).
 /// Long flags are flags starting with two dashes (`--help`).
-/// You can combine short `BoolFlag` flags, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+/// 
+/// Short flags of `BoolFlag` can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 /// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
@@ -253,7 +254,7 @@ where Args: Iterator<Item = String> {
     Ok(true)
 }
 
-/// Consumes and parses CLI arguments from `Iterator<String>`.
+/// Consumes and parses flags and arguments from `Iterator<String>`.
 ///
 /// # Returns
 /// ## Ok
@@ -301,8 +302,8 @@ where Args: Iterator<Item = String> {
 }
 
 /// Works the same way as `parse_args`, but stops when it encounters the first argument.
-/// Consumes everything before first arguments from `args` iterator, so `args` can be used again to
-/// parse the remaining arguments for a subcommand.
+/// Consumes all flags before the first argument from `args` iterator, so `args` can be used again to
+/// parse the remaining contents.
 ///
 /// # Returns
 /// ## Ok

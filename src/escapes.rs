@@ -1,4 +1,4 @@
-//! Cursor manipulation.
+//! Most common escapes to manipulate terminals.
 
 use std::fmt::Display;
 
