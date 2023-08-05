@@ -300,6 +300,69 @@ where Args: Iterator<Item = String> {
     Ok(parsed_arguments)
 }
 
+/// Works the same way as `parse_args`, but stops when it encounters the first argument.
+/// Consumes everything before first arguments from `args` iterator, so `args` can be used again to
+/// parse the remaining arguments for a subcommand.
+///
+/// # Returns
+/// ## Ok
+/// First argument that is not a flag.
+/// Changes values passed in enums to matching values from args.
+///
+/// ## Err
+/// - On unknown flag;
+/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
+/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+/// 
+/// ### Example
+/// ```rust
+/// use std::env::args;
+/// use toiletcli::flags;
+/// use toiletcli::flags::{FlagType, parse_flags, parse_flags_until_subcommand};
+/// 
+/// let mut args = args();
+/// 
+/// // Most often, path to the program will be the first argument.
+/// // This will prevent the function from parsing, as path to the program does not start with '-'.
+/// let program_name = args.next().unwrap();
+///
+/// let mut v_flag;
+///
+/// let mut main_flags = flags![
+///     v_flag: BoolFlag, ["-v"]
+/// ];
+///
+/// let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
+/// 
+/// let mut d_flag;
+///
+/// let mut sub_flags = flags![
+///     d_flag: BoolFlag, ["-d"]
+/// ];
+///
+/// let subcommand_args = parse_flags(&mut args, &mut sub_flags);
+/// ```
+pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<String, String>
+where Args: Iterator<Item = String> {
+    let mut subcommand = String::new();
+
+    if cfg!(debug_assertions) {
+        check_flags(&flags);
+    }
+
+    while let Some(arg) = args.next() {
+        let is_flag = parse_arg(&arg, args, flags)?;
+
+        if !is_flag {
+            subcommand = arg.clone();
+            break;
+        }
+    }
+
+    Ok(subcommand)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
