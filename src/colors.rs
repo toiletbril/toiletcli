@@ -260,7 +260,7 @@ impl FromStr for Color {
     }
 }
 
-/// Terminal style codes. Can be used via `Display`.
+/// Terminal style codes.
 ///
 /// # Example
 /// ```rust
@@ -326,7 +326,7 @@ impl FromStr for Style {
     }
 }
 
-/// Underline style codes. Will not be used on incompatible terminals. Can be used via `Display`.
+/// Underline style codes. Will not be used on incompatible terminals.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum UnderlineStyle {
@@ -374,7 +374,7 @@ impl FromStr for UnderlineStyle {
 }
 
 /// Structure to save a specific style and colors.
-/// Use `StyleBuilder` to construct this.
+/// Use [`StyleBuilder`](struct@StyleBuilder) to construct this.
 #[derive(Default, Debug, Clone)]
 pub struct TerminalStyle {
     foreground: Color,
@@ -428,7 +428,7 @@ impl Display for TerminalStyle {
     }
 }
 
-/// Builder for `TerminalStyle`.
+/// Builder for [`TerminalStyle`](struct@TerminalStyle).
 ///
 /// # Example
 /// ```rust
@@ -486,7 +486,6 @@ impl StyleBuilder {
     }
 }
 
-/// Run with `--nocapture`
 #[cfg(test)]
 mod tests {
     use super::*;
