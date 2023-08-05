@@ -374,7 +374,7 @@ mod tests {
 
         let flags = vec![
             (FlagType::StringFlag(&mut color),   vec!["--color", "-c"]),
-            (FlagType::BoolFlag(&mut show_help), vec!["--help"], ),
+            (FlagType::BoolFlag(&mut show_help), vec!["--help"]),
         ];
 
         let mut color_macro;
@@ -390,19 +390,20 @@ mod tests {
 
     #[test]
     fn parse_flags_default() {
-        let args_vector = vec![
-            "program".to_string(),
-            "argument_one".to_string(),
-            "-aVns".to_string(),
-            "--long-specific".to_string(),
-            "something".to_string(),
-            "-vvvvv".to_string(),
-            "--many".to_string(),
-            "first".to_string(),
-            "--many".to_string(),
-            "second".to_string(),
-            "argument_two".to_string(),
+        let argv = vec![
+            "program",
+            "argument_one",
+            "-aVns",
+            "--long-specific",
+            "something",
+            "-vvvvv",
+            "--many",
+            "first",
+            "--many",
+            "second",
+            "argument_two",
         ];
+        let mut args = argv.iter().map(|x| x.to_string());
 
         let mut a = false;
         let mut big_v = false;
@@ -429,42 +430,21 @@ mod tests {
             (FlagType::ManyFlag(&mut many), vec!["--many"]),
         ];
 
-        let args = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+        let parsed_args = parse_flags(&mut args, &mut flags).unwrap();
 
-        assert_eq!(
-            args, vec!["program", "argument_one", "argument_two"],
-            "args: {:?} should be: {:?}",
-            args, vec!["program", "argument_one", "argument_two"]
-        );
-        assert_eq!(
-            (
-                a, big_v, n, s, v,
-                &long_specific, &not_used, z,
-                &many
-            ),
-            (
-                true, true, true, true, 5,
-                &"something".to_string(), &"".to_string(), false,
-                &vec!["first".to_string(), "second".to_string()]
-            ),
-            "flags: {:?} should be: {:?}",
-            (
-                a, big_v, n, s,
-                &long_specific, &not_used, z,
-                &many
-            ),
-            (
-                true, true, true, true,
-                &"something".to_string(), &"".to_string(), false,
-                &vec!["first".to_string(), "second".to_string()]
-            ),
-        );
+        assert_eq!(parsed_args, vec!["program", "argument_one", "argument_two"]);
+        assert_eq!(a && big_v && n && s, true);
+        assert_eq!(v, 5);
+        assert_eq!(z, false);
+        assert_eq!(long_specific, "something");
+        assert_eq!(not_used, "");
+        assert_eq!(many, vec!["first", "second"])
     }
 
     #[test]
     fn parse_everyting_after() {
         let argv = vec!["program", "-v", "-rr", "-e", "argument", "-file", "hello!", "-rrrr"];
-        let mut args_vector = argv.iter().map(|x| x.to_string());
+        let mut args = argv.iter().map(|x| x.to_string());
 
         let mut v;
         let mut r;
@@ -476,19 +456,18 @@ mod tests {
             everything_after: EverythingAfterFlag, ["-e"]
         ];
 
-        let args = parse_flags(&mut args_vector, &mut flags);
+        let parsed_args = parse_flags(&mut args, &mut flags);
 
         assert_eq!(v, 1);
         assert_eq!(r, 2);
-        assert_eq!(everything_after,
-                   vec!["argument", "-file", "hello!", "-rrrr"].iter().map(|x| x.to_string()).collect::<Vec<_>>());
-        assert_eq!(args.unwrap(), vec!["program".to_string()]);
+        assert_eq!(everything_after, vec!["argument", "-file", "hello!", "-rrrr"]);
+        assert_eq!(parsed_args.unwrap(), vec!["program"]);
     }
 
     #[test]
     fn parse_repeat_flag() {
         let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
-        let mut args_vector = argv.iter().map(|x| x.to_string());
+        let mut args = argv.iter().map(|x| x.to_string());
 
         let mut v;
         let mut r;
@@ -502,13 +481,45 @@ mod tests {
             t: RepeatFlag,      ["-t", "--test"]
         ];
 
-        let args = parse_flags(&mut args_vector, &mut flags);
+        let parsed_args = parse_flags(&mut args, &mut flags);
 
         assert_eq!(v, 4);
         assert_eq!(r, 3);
         assert_eq!(unused, 0);
         assert_eq!(t, 1);
-        assert_eq!(args.unwrap(), vec!["program".to_string(), "argument".to_string()]);
+        assert_eq!(parsed_args.unwrap(), vec!["program", "argument"]);
+    }
+
+    #[test]
+    fn parse_subcommands() {
+        let argv = vec!["program", "-v","dump", "-d", "argument"];
+        let mut args = argv.iter().map(|x| x.to_string());
+         
+        let program_name = args.next().unwrap();
+        
+        assert_eq!(program_name, "program".to_string());
+
+        let mut v;
+
+        let mut main_flags = flags![
+            v: BoolFlag, ["-v"]
+        ];
+
+        let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
+
+        assert_eq!(v, true);
+        assert_eq!(subcommand.unwrap(), "dump".to_string());
+
+        let mut d;
+
+        let mut sub_flags = flags![
+            d: BoolFlag, ["-d"]
+        ];
+
+        let parsed_args = parse_flags(&mut args, &mut sub_flags);
+
+        assert_eq!(d, true);
+        assert_eq!(parsed_args.unwrap(), vec!["argument"]);
     }
 
     #[test]
@@ -516,8 +527,13 @@ mod tests {
     #[cfg(debug_assertions)]
     fn parse_flags_malformed() {
         let args_vector = vec!["program".to_string()];
+
         let mut malformed = false;
-        let mut flags = vec![(FlagType::BoolFlag(&mut malformed), vec!["m"])];
+        
+        let mut flags = vec![
+            (FlagType::BoolFlag(&mut malformed), vec!["m"])
+        ];
+    
         let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 
@@ -526,8 +542,29 @@ mod tests {
     #[cfg(debug_assertions)]
     fn parse_flags_malformed_long() {
         let args_vector = vec!["program".to_string()];
+        
         let mut malformed = false;
-        let mut flags = vec![(FlagType::BoolFlag(&mut malformed), vec!["-malformed"])];
+        
+        let mut flags = vec![
+            (FlagType::BoolFlag(&mut malformed), vec!["-onedash"])
+        ];
+        
+        let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    }
+
+    
+    #[test]
+    #[should_panic]
+    #[cfg(debug_assertions)]
+    fn parse_flags_malformed_space() {
+        let args_vector = vec!["program".to_string()];
+
+        let mut malformed = false;
+
+        let mut flags = vec![
+            (FlagType::BoolFlag(&mut malformed), vec!["--space bar"])
+        ];
+
         let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 }
