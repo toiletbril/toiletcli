@@ -18,9 +18,9 @@ fn esc_sq(code: String) -> String {
     }
 }
 
-/// ANSI, RGB, 8-bit colors. `Display` writes foreground color.
+/// ANSI, RGB, 8-bit colors. [`Display`](trait@Display) writes foreground color.
 ///
-/// Can be parsed from string with `from_str` or `&str.parse::<Color>()`. For example, `"21"` will be parsed as 8-bit color, and `"bright red"` (`'-'` or `'_'` can be used instead of space) will be parsed as standard colors.
+/// Can be parsed from string with [`from_str`](trait@FromStr) or [`&str.parse::<Color>()`](fn@str::parse<Color>). For example, `"21"` will be parsed as 8-bit color, and `"bright red"` (`'-'` or `'_'` can be used instead of spaces) will be parsed as one of 16 colors.
 ///
 /// # Example
 /// ```rust

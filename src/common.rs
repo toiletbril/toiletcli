@@ -21,25 +21,33 @@ pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 
 static mut UNDERLINE_SUPPORTED: Option<bool> = None;
 
-// TODO: We do a bit of races
+const SUPPORTED_TERMINALS: &'static [&str] = &[
+    "vte",
+    "kitty",
+    "mintty",
+    "iterm2",
+    "alacritty" // since 0.12.0
+];
+
 /// Returns `true` if current terminal supports underline styling.
+/// Calling this first time is thread unsafe, since I don't plan on using this from separate threads.
 pub fn is_underline_style_supported() -> bool {
     unsafe {
         if let Some(value) = UNDERLINE_SUPPORTED {
             value
         } else {
             if let Ok(terminal) = std::env::var("TERMINAL") {
-                for supported in ["vte", "kitty", "mintty", "iterm2"] {
+                for supported in SUPPORTED_TERMINALS {
                     if terminal.contains(supported) {
                         UNDERLINE_SUPPORTED = Some(true);
                         return true;
                     }
                 }
-                false
             } else {
                 UNDERLINE_SUPPORTED = Some(false);
-                false
             }
+
+            false
         }
     }
 }
