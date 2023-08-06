@@ -9,7 +9,7 @@ trait HasCode {
     fn code(&self) -> String;
 }
 
-/// System escapes.
+/// Terminal manipulation.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum System<'a> {
@@ -88,7 +88,7 @@ impl Display for Cursor {
     }
 }
 
-/// Jumps to beginning of lines.
+/// Cursor movement to beginning of lines.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Line {
@@ -118,7 +118,7 @@ impl Display for Line {
     }
 }
 
-/// Screen erasing.
+/// Symbol erasing.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Erase {
     /// Insert N blank characters.

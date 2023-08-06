@@ -34,7 +34,7 @@ pub enum FlagType<'a> {
 /// Short flags are two letter flags starting with one dash (`-n`).
 /// Long flags are flags starting with two dashes (`--help`).
 ///
-/// Short flags of `BoolFlag` can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+/// Short flags of [`BoolFlag`](type@FlagType::BoolFlag) can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 /// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
@@ -311,8 +311,8 @@ where Args: Iterator<Item = String> {
 ///
 /// ## Err
 /// - On unknown flag;
-/// - If `StringFlag` or `ManyFlag` is specified, but no value is provided for it;
-/// - If short `StringFlag` or `ManyFlag` is combined with some other flag.
+/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
+/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
 ///
 /// ### Example
 /// ```rust
