@@ -19,17 +19,29 @@ default = ["flags", "colors", "escapes"]
 use std::env::args;
 
 use toiletcli::flags;
-use toiletcli::flags::{parse_flags, FlagType, Flag};
+use toiletcli::flags::{FlagType, parse_flags, parse_flags_until_subcommand};
 
-let mut color: String;
-let mut show_help: bool;
+let mut args = args();
 
-let mut flags = flags!(
-    color: StringFlag,   ["--color", "-c"],
-    show_help: BoolFlag, ["--help"]
-);
+// Most often, path to the program will be the first argument.
+// This will prevent the function from parsing, as path to the program does not start with '-'.
+let program_name = args.next().unwrap();
 
-let args = parse_flags(&mut args(), &mut flags);
+let mut v_flag;
+
+let mut main_flags = flags![
+    v_flag: BoolFlag, ["-v", "--long-v"]
+];
+
+let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags).unwrap();
+
+let mut d_flag;
+
+let mut sub_flags = flags![
+    d_flag: BoolFlag, ["-d"]
+];
+
+let subcommand_args = parse_flags(&mut args, &mut sub_flags);
 ```
 
 ```rust
