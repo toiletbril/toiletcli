@@ -29,7 +29,7 @@ const SUPPORTED_TERMINALS: &'static [&str] = &[
     "alacritty" // since 0.12.0
 ];
 
-/// Returns `true` if current terminal supports underline styling.
+/// Returns `true` if current `$TERMINAL` underline styling.
 /// Calling this first time is thread unsafe, since I don't plan on using this from separate threads.
 pub fn is_underline_style_supported() -> bool {
     unsafe {
