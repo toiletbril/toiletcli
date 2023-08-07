@@ -7,14 +7,14 @@ use crate::common::is_underline_style_supported;
 
 #[inline(always)]
 fn esc_sq(code: String) -> String {
-    if code.len() != 0 {
+    if !code.is_empty() {
         if cfg!(feature = "mock_codes") {
             format!("{{code {}}}", code)
         } else {
             format!("\u{001b}[{}m", code)
         }
     } else {
-        String::new()
+        code    
     }
 }
 
