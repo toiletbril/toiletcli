@@ -1,4 +1,5 @@
 //! Convenient ANSI terminal colors and styles.
+//!
 //! All enums implement [`Display`](trait@Display) and [`FromStr`](trait@FromStr) traits.
 
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
