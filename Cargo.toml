@@ -4,20 +4,21 @@ readme  = "README.md"
 authors = ["toiletbril"]
 repository = "https://github.com/toiletbril/toiletcli"
 license = "MIT"
-version = "0.7.2"
+version = "0.7.3"
 edition = "2021"
 
-description = "Minimal framework for command line applications."
+description = "Framework for command line applications."
 
 include    = ["/src"]
 keywords   = ["cli", "tools", "lib"]
 categories = ["command-line-utilities"]
 
 [features]
-default   = ["flags", "colors", "escapes"]
-colors    = []
-escapes   = []
-flags     = []
+default    = ["flags", "colors", "escapes"]
+colors     = []
+mock_codes = ["colors"] # forces "colors" to print mock codes instead of real ones for debugging
+escapes    = []
+flags      = []
 
 [lib]
 name = "toiletcli"
