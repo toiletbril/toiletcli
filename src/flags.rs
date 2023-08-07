@@ -122,11 +122,11 @@ where Args: Iterator<Item = String> {
     let mut first = None;
 
     while let Some(ch) = chars.next() {
-        let mut found = false;
-
         if found_long {
             break;
         }
+
+        let mut found = false;
 
         // Longs flags go here.
         if ch == '-' {
