@@ -1,4 +1,8 @@
 //! Command line argument parsing.
+//!
+//! Short flags without a value can be combined.
+//! Flags which have a value can't be combined, and they don't use an equals punctuation (or similar) to separate the key and value.
+//! E.g. no `-k=<value>`. The intended usage is `-k <value>`, with a key `-k` and a value of `<value>`.
 
 /// Enum that contains value to be modified.
 ///
@@ -35,7 +39,6 @@ pub enum FlagType<'a> {
 /// Long flags are flags starting with two dashes (`--help`).
 ///
 /// Short flags of [`BoolFlag`](type@FlagType::BoolFlag) can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
-/// This is deliberately made that way to the detriment of parsing to avoid verbosity when declaring flags.
 ///
 /// # Example
 /// ```rust
@@ -135,77 +138,26 @@ where Args: Iterator<Item = String> {
             break;
         }
 
-        let mut found = false;
+        let mut found_short = false;
 
-        // Longs flags go here.
-        if ch == '-' {
-            for (flag_value, flag_strings) in &mut *flags {
-                for flag in flag_strings {
-                    if arg != *flag {
-                        continue;
-                    }
-
-                    found_long = true;
-
-                    match flag_value {
-                        FlagType::BoolFlag(value) => {
-                            **value = true;
-                        }
-
-                        FlagType::StringFlag(value) => {
-                            if let Some(next_arg) = args.next() {
-                                **value = next_arg.clone();
-                            } else {
-                                return Err(format!("No value provided for '{}'", flag));
-                            }
-                        }
-
-                        FlagType::ManyFlag(value) => {
-                            if let Some(next_arg) = args.next() {
-                                value.push(next_arg.clone());
-                            } else {
-                                return Err(format!("No value provided for '{}'", flag));
-                            }
-                        }
-
-                        FlagType::RepeatFlag(value) => {
-                            **value = 1;
-                        }
-
-                        FlagType::EverythingAfterFlag(value) => {
-                            while let Some(next_arg) = args.next() {
-                                value.push(next_arg.clone());
-                            }
-                            if value.is_empty() {
-                                return Err(format!("No value provided for '{}'", flag));
-                            }
-                        }
-                    }
-                }
-            }
-            if !found_long {
-                return Err(format!("Unknown long flag '{}'", arg));
-            }
-            break;
-        }
-
-        // One letter flags go here. (eg. -aVsd)
         for (flag_value, flag_strings) in &mut *flags {
             for flag in flag_strings {
-                if flag.len() != 2 {
+                // Long flag starts with 2 dashes, and should just match entirely
+                if ch == '-' {
+                    if arg == *flag {
+                        found_long = true;
+                    } else {
+                        return Err(format!("Unknown long flag '{}'", arg));
+                    }
+                }
+                // Otherwise, flag is a string with a single dash and a character
+                else if flag.len() == 2 && flag.ends_with(ch) {
+                    found_short = true;
+                } else {
                     continue;
                 }
 
-                let short_flag = flag.chars().last().unwrap();
-
-                if ch != short_flag {
-                    continue;
-                }
-
-                found = true;
-
-                // Don't allow combining short flags that have a value.
-                // Combining flags without value with a single value flag is allowed.
+                // Don't allow combining short flags that have a value
                 if let Some(first) = first {
                     return Err(format!("Flag '-{}' requires a value and can't be combined", first));
                 }
@@ -225,12 +177,12 @@ where Args: Iterator<Item = String> {
                     }
 
                     FlagType::RepeatFlag(value) => {
-                        if in_repeat == None || in_repeat == Some(ch) {
+                        if in_repeat == Some(ch) {
                             **value += 1;
                         } else {
-                            in_repeat = Some(ch);
                             **value = 1;
                         }
+                        in_repeat = Some(ch);
                     }
 
                     FlagType::ManyFlag(value) => {
@@ -254,8 +206,11 @@ where Args: Iterator<Item = String> {
                 }
             }
         }
+        if found_long {
+            break;
+        }
 
-        if !found {
+        if !found_short {
             return Err(format!("Unknown flag '-{}'", ch));
         }
     }
