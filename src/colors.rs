@@ -127,12 +127,11 @@ impl Color {
             Color::Byte(color)  => format!("38;5;{}", color),
             Color::RGB(r, g, b) => format!("38;2;{};{};{}", r, g, b),
             _ => {
-                let color = u8::from(*self);
-
-                if color < 8 {
-                    format!("3{}", color)
+                let color_number = u8::from(*self);
+                if color_number < 8 {
+                    format!("3{}", color_number)
                 } else {
-                    format!("9{}", color - 8)
+                    format!("9{}", color_number - 8)
                 }
             }
         }
@@ -145,12 +144,12 @@ impl Color {
             Color::Byte(color)  => format!("48;5;{}", color),
             Color::RGB(r, g, b) => format!("48;2;{};{};{}", r, g, b),
             _ => {
-                let color = u8::from(*self);
+                let color_number = u8::from(*self);
 
-                if color < 8 {
-                    format!("4{}", color)
+                if color_number < 8 {
+                    format!("4{}", color_number)
                 } else {
-                    format!("10{}", color - 8)
+                    format!("10{}", color_number - 8)
                 }
             }
         }
@@ -162,7 +161,7 @@ impl Color {
             Color::Reset        => "59".to_string(),
             Color::Byte(color)  => format!("58;5;{}", color),
             Color::RGB(r, g, b) => format!("58;2;{};{};{}", r, g, b),
-            _                   => format!("58;5;{}", self.byte()),
+            _ => format!("58;5;{}", self.byte()),
         }
     }
 }
@@ -214,49 +213,47 @@ impl FromStr for Color {
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         let delimiters = "-_ ";
+        let indices = string.match_indices(|ch| { delimiters.contains(ch) });
 
-        for (index, _) in string.match_indices(|ch| { delimiters.contains(ch) }) {
-            if string[..index] == *"bright" {
-                return Ok(
-                    match &string[index + 1..] {
-                        "none"   => Color::None,
-                        "black"  => Color::BrightBlack,
-                        "red"    => Color::BrightRed,
-                        "green"  => Color::BrightGreen,
-                        "yellow" => Color::BrightYellow,
-                        "blue"   => Color::BrightBlue,
-                        "purple" => Color::BrightPurple,
-                        "cyan"   => Color::BrightCyan,
-                        "white"  => Color::BrightWhite,
-                        _ => {
-                            let err = Error::new(ErrorKind::Other, format!("Unknown color '{}'", string));
-                            return Err(err)
-                        }
-                    }
-                )
+        let mut color_string = string;
+        let mut fix_value = 0;
+
+        for (index, _) in indices {
+            let raw_color = &string[index + 1..];
+            let prefix = &string[..index];
+
+            if prefix == "bright" {
+                fix_value = 8;
+                color_string = raw_color;
             }
         }
-        Ok(match string {
-                "none"   => Color::None,
-                "black"  => Color::Black,
-                "red"    => Color::Red,
-                "green"  => Color::Green,
-                "yellow" => Color::Yellow,
-                "blue"   => Color::Blue,
-                "purple" => Color::Purple,
-                "cyan"   => Color::Cyan,
-                "white"  => Color::White,
-                "gray"   => Color::BrightBlack,
-                _ => {
-                    if let Ok(byte) = string.parse::<u8>() {
-                        Color::Byte(byte)
-                    } else {
-                        let err = Error::new(ErrorKind::Other, format!("Unknown color '{}'", string));
-                        return Err(err)
-                    }
+
+        let color_number = u8::from(match color_string {
+            "none"   => Color::None,
+            "black"  => Color::Black,
+            "red"    => Color::Red,
+            "green"  => Color::Green,
+            "yellow" => Color::Yellow,
+            "blue"   => Color::Blue,
+            "purple" => Color::Purple,
+            "cyan"   => Color::Cyan,
+            "white"  => Color::White,
+            "gray"   => Color::BrightBlack,
+            _ => {
+                if let Ok(byte) = string.parse::<u8>() {
+                    Color::Byte(byte)
+                } else {
+                    let err = Error::new(
+                        ErrorKind::Other, format!("Unknown color '{}'", string)
+                    );
+                    return Err(err)
                 }
             }
-        )
+        });
+
+        let color = Color::from(color_number + fix_value);
+
+        Ok(color)
     }
 }
 
@@ -285,6 +282,12 @@ pub enum Style {
     ResetItalic        = 23,
     ResetUnderline     = 24,
     ResetStrikethrough = 29,
+}
+
+impl Style {
+    fn code(&self) -> String {
+        format!("{}", *self as u8)
+    }
 }
 
 impl Default for Style {
@@ -330,11 +333,11 @@ impl FromStr for Style {
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum UnderlineStyle {
-    Straight      = 1,
-    Double        = 2,
-    Curly         = 3,
-    Dotted        = 4,
-    Dashed        = 5,
+    Straight = 1,
+    Double   = 2,
+    Curly    = 3,
+    Dotted   = 4,
+    Dashed   = 5,
 }
 
 impl Default for UnderlineStyle {
@@ -377,55 +380,23 @@ impl FromStr for UnderlineStyle {
 /// Use [`StyleBuilder`](struct@StyleBuilder) to construct this.
 #[derive(Default, Debug, Clone)]
 pub struct TerminalStyle {
-    foreground: Color,
-    background: Color,
-    styles: Vec<Style>,
-    underline_color: Color,
-    underline_style: UnderlineStyle,
+    printable_string: String
 }
 
-fn is_code_closed(string: &String) -> bool {
-    if let Some(last) = string.chars().last() {
-        last == ';'
-    } else {
-        true
+impl Display for TerminalStyle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", esc_sq(self.printable_string.clone()))
     }
 }
 
 #[inline(always)]
 fn concat_codes(code_string: &mut String, style: &String) {
-    if style.is_empty() {
-        ()
-    }
-    else if is_code_closed(code_string) {
-        *code_string = format!("{}{}", code_string, style)
-    } else {
-        *code_string = format!("{};{}", code_string, style)
-    }
-}
-
-impl Display for TerminalStyle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut code_string = String::new();
-
-        concat_codes(&mut code_string, &self.foreground.fg_code());
-        concat_codes(&mut code_string, &self.background.bg_code());
-
-        for style in &self.styles {
-            concat_codes(&mut code_string, &(*style as u8).to_string());
+    if !code_string.is_empty() {
+        if !code_string.ends_with(';') {
+            *code_string += ";";
         }
-
-        if is_underline_style_supported() {
-            concat_codes(&mut code_string, &self.underline_color.ul_code());
-            if self.underline_color != Color::None {
-                concat_codes(&mut code_string, &self.underline_style.code());
-            }
-        }
-
-        let _ = write!(f, "{}", esc_sq(code_string))?;
-
-        Ok(())
     }
+    *code_string += style;
 }
 
 /// Builder for [`TerminalStyle`](struct@TerminalStyle).
@@ -454,30 +425,34 @@ impl StyleBuilder {
     }
 
     pub fn foreground(&mut self, color: Color) -> &mut Self {
-        self.style.foreground = color;
+        concat_codes(&mut self.style.printable_string, &color.fg_code());
         self
     }
 
     pub fn background(&mut self, color: Color) -> &mut Self {
-        self.style.background = color;
+        concat_codes(&mut self.style.printable_string, &color.bg_code());
         self
     }
 
     /// Add a style to text. Can be used multiple times.
     pub fn add_style(&mut self, style: Style) -> &mut Self {
-        self.style.styles.push(style);
+        concat_codes(&mut self.style.printable_string, &style.code());
         self
     }
 
     /// Underline colors and style will only work on supported terminals.
     pub fn underline_style(&mut self, underline_style: UnderlineStyle) -> &mut Self {
-        self.style.underline_style = underline_style;
+        if is_underline_style_supported() {
+            concat_codes(&mut self.style.printable_string, &underline_style.code());
+        }
         self
     }
 
     /// Underline colors and style will only work on supported terminals.
     pub fn underline_color(&mut self, underline_color: Color) -> &mut Self {
-        self.style.underline_color = underline_color;
+        if is_underline_style_supported() {
+            concat_codes(&mut self.style.printable_string, &underline_color.ul_code());
+        }
         self
     }
 
