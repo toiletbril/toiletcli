@@ -1,10 +1,14 @@
 //! Command line argument parsing.
 //!
-//! Short flags without a value can be combined.
-//! Flags which have a value can't be combined, and they don't use an equals punctuation (or similar) to separate the key and value.
+//! Long flags are made of two dashes and a word (`--help`).
+//! Short flags are made of a dash and a single letter (`-n`).
+//!
+//! Short flags of [`BoolFlag`](type@FlagType::BoolFlag) type can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+//!
+//! Flags which take a value can't be combined, and they don't use an equals punctuation (or similar) to separate the key and value.
 //! E.g. no `-k=<value>`. The intended usage is `-k <value>`, with a key `-k` and a value of `<value>`.
 
-/// Enum that contains value to be modified.
+/// Enum that contains a mutable reference to be modified.
 ///
 /// # Example
 /// ```rust
@@ -20,25 +24,22 @@
 /// ```
 #[derive(Debug, PartialEq)]
 pub enum FlagType<'a> {
-    /// Will change to `true` if present.
+    /// Will change reference to `true` if present.
     BoolFlag(&'a mut bool),
-    /// Will change to specified `value` if present, will remain unchanged if not.
-    /// `value` will always be the value from that flag's last occurence.
+    /// Requires a value.
+    /// Will change reference to value passed after that flag if present.
     StringFlag(&'a mut String),
-    /// Will include all values specified, even if that flag was used multiple times.
+    /// Requires at least one value.
+    /// Works the same as [`StringFlag`](type@FlagType::StringFlag), but will include all values if flag was used multiple times.
     ManyFlag(&'a mut Vec<String>),
-    /// Flag that remembers repeat count of letter. Long version will return 1.
+    /// Will count the number of times a letter is repeated. Long version increases count by 1.
     RepeatFlag(&'a mut usize),
-    /// Will include everything after that flag.
+    /// Requires at least one value.
+    /// Will include everything after that flag, treating all flags after that one as arguments.
     EverythingAfterFlag(&'a mut Vec<String>),
 }
 
-/// A pair with a value to be modified and flag aliases.
-///
-/// Short flags are two letter flags starting with one dash (`-n`).
-/// Long flags are flags starting with two dashes (`--help`).
-///
-/// Short flags of [`BoolFlag`](type@FlagType::BoolFlag) can be combined, eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
+/// A pair with a reference to be modified and flag aliases.
 ///
 /// # Example
 /// ```rust
@@ -215,12 +216,12 @@ where Args: Iterator<Item = String> {
 /// # Returns
 /// ## Ok
 /// All arguments that are not flags.
-/// Changes values passed in enums to matching values from args.
+/// Changes references passed in the enums according to parsed flags.
 ///
 /// ## Err
-/// - On unknown flag;
-/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
-/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
+/// - Unknown flag;
+/// - No value provided for a flag that requires it;
+/// - Short flag that takes a value was combined with other flag.
 ///
 /// # Example
 /// ```rust
@@ -263,12 +264,12 @@ where Args: Iterator<Item = String> {
 /// # Returns
 /// ## Ok
 /// First argument that is not a flag.
-/// Changes values passed in enums to matching values from args.
+/// Changes references passed in the enums according to parsed flags.
 ///
 /// ## Err
-/// - On unknown flag;
-/// - If [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is specified, but no value is provided for it;
-/// - If short [`StringFlag`](type@FlagType::StringFlag) or [`ManyFlag`](type@FlagType::ManyFlag) is combined with some other flag.
+/// - Unknown flag;
+/// - No value provided for a flag that requires it;
+/// - Short flag that takes a value was combined with other flag.
 ///
 /// ### Example
 /// ```rust
@@ -288,7 +289,7 @@ where Args: Iterator<Item = String> {
 ///     v_flag: BoolFlag, ["-v"]
 /// ];
 ///
-/// let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
+/// let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags).unwrap();
 ///
 /// let mut d_flag;
 ///
