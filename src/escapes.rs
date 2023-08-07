@@ -5,10 +5,6 @@ use std::fmt::Display;
 
 const ESC: &str = "\u{001b}";
 
-trait HasCode {
-    fn code(&self) -> String;
-}
-
 /// Terminal manipulation.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -19,7 +15,7 @@ pub enum System<'a> {
     SetTitle(&'a str),
 }
 
-impl<'a> HasCode for System<'a> {
+impl<'a> System<'a> {
     fn code(&self) -> String {
         match self {
             System::ResetState      => "c".to_string(),
@@ -62,7 +58,7 @@ pub enum Cursor {
     Goto(u32, u32),
 }
 
-impl HasCode for Cursor {
+impl Cursor {
     fn code(&self) -> String {
         match self {
             Cursor::Save            => "s".to_string(),
@@ -98,7 +94,7 @@ pub enum Line {
     Down(u32),
 }
 
-impl HasCode for Line {
+impl Line {
     fn code(&self) -> String {
         match self {
             Line::Home        => "0G".to_string(),
@@ -137,7 +133,7 @@ pub enum Erase {
     LineBefore,
 }
 
-impl HasCode for Erase {
+impl Erase {
     fn code(&self) -> String {
         match self {
             Erase::After(value) => format!("{}@", value),
