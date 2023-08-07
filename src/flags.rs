@@ -123,41 +123,34 @@ fn check_flags(flags: &[Flag]) {
 // -> Result<IsFlag, String>
 fn parse_arg<Args>(arg: &String, args: &mut Args, flags: &mut [Flag]) -> Result<bool, String>
 where Args: Iterator<Item = String> {
-    let mut chars = arg.chars();
+    let mut chars = arg.chars().peekable();
 
     if chars.next() != Some('-') {
         return Ok(false);
     }
 
+    let is_long = chars.peek() == Some(&'-');
+
     let mut found_long = false;
-    let mut in_repeat = None;
     let mut first = None;
 
     while let Some(ch) = chars.next() {
-        if found_long {
-            break;
-        }
-
         let mut found_short = false;
 
         for (flag_value, flag_strings) in &mut *flags {
             for flag in flag_strings {
-                // Long flag starts with 2 dashes, and should just match entirely
-                if ch == '-' {
-                    if arg == *flag {
-                        found_long = true;
-                    } else {
-                        return Err(format!("Unknown long flag '{}'", arg));
-                    }
-                }
-                // Otherwise, flag is a string with a single dash and a character
-                else if flag.len() == 2 && flag.ends_with(ch) {
+                // Short flag is a string with a single dash and a character
+                if flag.len() == 2 && flag.ends_with(ch) {
                     found_short = true;
+                }
+                // Long flag starts with 2 dashes, and should just match entirely
+                else if ch == '-' && arg == *flag {
+                    found_long = true;
                 } else {
                     continue;
                 }
 
-                // Don't allow combining short flags that have a value
+                // Combining short flags that need a value is not allowed
                 if let Some(first) = first {
                     return Err(format!("Flag '-{}' requires a value and can't be combined", first));
                 }
@@ -177,12 +170,7 @@ where Args: Iterator<Item = String> {
                     }
 
                     FlagType::RepeatFlag(value) => {
-                        if in_repeat == Some(ch) {
-                            **value += 1;
-                        } else {
-                            **value = 1;
-                        }
-                        in_repeat = Some(ch);
+                        **value += 1;
                     }
 
                     FlagType::ManyFlag(value) => {
@@ -208,6 +196,10 @@ where Args: Iterator<Item = String> {
         }
         if found_long {
             break;
+        }
+
+        if is_long && !found_long {
+            return Err(format!("Unknown long flag '{}'", arg));
         }
 
         if !found_short {
