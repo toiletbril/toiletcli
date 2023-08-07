@@ -91,18 +91,27 @@ macro_rules! flags {
 // Check flags in flag array for malformed flags in debug builds.
 #[cfg(debug_assertions)]
 fn check_flags(flags: &[Flag]) {
+    const SPACE_HELP: &'static str =
+        "Flags should not contain whitespaces";
+    const LEN_HELP: &'static str =
+        "Flags should be made of either a single dash with one letter, like '-h', or two dashes with a word, like '--help'";
+    const LONG_HELP: &'static str =
+        "Long flags should start with two dashes, like '--help' or '--color'";
+    const SHORT_HELP: &'static str =
+        "Flags should start with '-' or '--', like '--help' or '-h'";
+
     for (_, flag_strings) in &*flags {
         for flag in flag_strings {
-            assert!(!flag.contains(" "),
-            "Invalid flag: '{}'. Flag aliases should not contain spaces. EXAMPLE: '--help', '-h'", flag);
+            assert!(!flag.contains(char::is_whitespace),
+                "Invalid flag '{}'. {}", flag, SPACE_HELP);
             assert!(flag.len() >= 2,
-            "Invalid flag '{}'. Flags are made of either a dash and a letter, like '-h' or two dashes with a word, like '--help'", flag);
+                "Invalid flag '{}'. {}", flag, LEN_HELP);
             if flag.len() > 2 {
                 assert!(flag.starts_with("--"),
-                "Invalid long flag: '{}'. Long flags should start with '--'.\nEXAMPLE: '--help', '--color'", flag);
+                    "Invalid long flag: '{}'. {}", flag, LONG_HELP);
             } else {
-                assert!(flag.starts_with("-"),
-                "Invalid flag: '{}'. Flag should start with '-' or '--'. EXAMPLE: '--help' (long flag), '-h' (short flag)", flag);
+                assert!(flag.starts_with('-'),
+                    "Invalid flag: '{}'. {}", flag, SHORT_HELP);
             }
         }
     }
