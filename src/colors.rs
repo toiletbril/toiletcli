@@ -7,14 +7,14 @@ use crate::common::is_underline_style_supported;
 
 #[inline(always)]
 fn esc_sq(code: String) -> String {
-    if !code.is_empty() {
-        if cfg!(feature = "mock_codes") {
-            format!("{{code {}}}", code)
-        } else {
-            format!("\u{001b}[{}m", code)
-        }
+    if code.is_empty() {
+        code
     } else {
-        code    
+        #[cfg(feature = "mock_codes")]
+        return format!("{{code {}}}", code);
+        
+        #[cfg(not(feature = "mock_codes"))]
+        return format!("\u{001b}[{}m", code);
     }
 }
 
@@ -362,12 +362,12 @@ impl FromStr for UnderlineStyle {
     type Err = Error;
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         match string.to_lowercase().as_str() {
-            "default"       |
-            "straight"      => Ok(UnderlineStyle::Straight),
-            "double"        => Ok(UnderlineStyle::Double),
-            "curly"         => Ok(UnderlineStyle::Curly),
-            "dotted"        => Ok(UnderlineStyle::Dotted),
-            "dashed"        => Ok(UnderlineStyle::Dashed),
+            "default"  |
+            "straight" => Ok(UnderlineStyle::Straight),
+            "double"   => Ok(UnderlineStyle::Double),
+            "curly"    => Ok(UnderlineStyle::Curly),
+            "dotted"   => Ok(UnderlineStyle::Dotted),
+            "dashed"   => Ok(UnderlineStyle::Dashed),
             _ => {
                 let err = Error::new(ErrorKind::Other, format!("Unknown underline style '{}'", string));
                 Err(err)
@@ -391,10 +391,8 @@ impl Display for TerminalStyle {
 
 #[inline(always)]
 fn concat_codes(code_string: &mut String, style: &String) {
-    if !code_string.is_empty() {
-        if !code_string.ends_with(';') {
-            *code_string += ";";
-        }
+    if !code_string.is_empty() && !code_string.ends_with(';') {
+        code_string.push(';');
     }
     *code_string += style;
 }
