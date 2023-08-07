@@ -141,12 +141,12 @@ fn main() -> () {
     );
 
     let italic = StyleBuilder::new()
-        .foreground(Color::White)
+        .foreground(Color::BrightBlue)
         .add_style(Style::Italic)
         .build();
 
     println!(
-        "{}This is white and italic! And {}THIS{} was not italic!{}",
+        "{}This is blue and italic! And {}THIS{} was not italic!{}",
         italic,
         Style::ResetItalic,
         Style::Italic,
@@ -154,10 +154,10 @@ fn main() -> () {
     );
 
     println!(
-        "{}This is also white and italic! And {}THIS{} was not white!{}",
+        "{}This is also blue and italic! And {}THIS{} was not blue!{}",
         italic,
         Color::Reset,
-        Color::White,
+        Color::BrightBlue,
         Style::Reset
     );
 }
