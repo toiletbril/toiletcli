@@ -257,7 +257,7 @@ where Args: Iterator<Item = String> {
     Ok(parsed_arguments)
 }
 
-/// Works the same way as `parse_args`, but stops when it encounters the first argument.
+/// Works the same way as [`parse_flags`](fn@parse_flags), but stops when it encounters the first argument.
 /// Consumes all flags before the first argument from `args` iterator, so `args` can be used again to
 /// parse the remaining contents.
 ///
