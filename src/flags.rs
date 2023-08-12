@@ -215,7 +215,7 @@ where Args: Iterator<Item = String> {
 ///
 /// # Returns
 /// ## Ok
-/// All arguments that are not flags.
+/// All arguments that are not flags. Can be empty.
 /// Changes references passed in the enums according to parsed flags.
 ///
 /// ## Err
@@ -250,7 +250,7 @@ where Args: Iterator<Item = String> {
         let is_flag = parse_arg(&arg, args, flags)?;
 
         if !is_flag {
-            parsed_arguments.push(arg.clone());
+            parsed_arguments.push(arg);
         }
     }
 
@@ -259,7 +259,7 @@ where Args: Iterator<Item = String> {
 
 /// Works the same way as [`parse_flags`](fn@parse_flags), but stops when it encounters the first argument.
 /// Consumes all flags before the first argument from `args` iterator, so `args` can be used again to
-/// parse the remaining contents.
+/// parse the remaining contents. Will return [`Err`] if no arguments were provided.
 ///
 /// # Returns
 /// ## Ok
@@ -268,11 +268,12 @@ where Args: Iterator<Item = String> {
 ///
 /// ## Err
 /// - Unknown flag;
+/// - No arguments were provided;
 /// - No value provided for a flag that requires it;
 /// - Short flag that takes a value was combined with other flag.
 ///
 /// ### Example
-/// ```rust
+/// ```no_run
 /// use std::env::args;
 /// use toiletcli::flags;
 /// use toiletcli::flags::{FlagType, parse_flags, parse_flags_until_subcommand};
@@ -301,8 +302,6 @@ where Args: Iterator<Item = String> {
 /// ```
 pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<String, String>
 where Args: Iterator<Item = String> {
-    let mut subcommand = String::new();
-
     #[cfg(debug_assertions)]
     check_flags(&flags);
 
@@ -310,14 +309,12 @@ where Args: Iterator<Item = String> {
         let is_flag = parse_arg(&arg, args, flags)?;
 
         if !is_flag {
-            subcommand = arg.clone();
-            break;
+            return Ok(arg);
         }
     }
 
-    Ok(subcommand)
+    Err("No arguments were provided".into())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -342,6 +339,55 @@ mod tests {
         );
 
         assert_eq!(flags, flags_macro);
+    }
+
+    #[test]
+    fn flag_everything_after() {
+        let argv = vec!["program", "-v", "-rr", "-e", "argument", "-file", "hello!", "-rrrr"];
+        let mut args = argv.iter().map(|x| x.to_string());
+
+        let mut v;
+        let mut r;
+        let mut everything_after;
+
+        let mut flags = flags![
+            v: RepeatFlag, ["-v"],
+            r: RepeatFlag, ["-r"],
+            everything_after: EverythingAfterFlag, ["-e"]
+        ];
+
+        let parsed_args = parse_flags(&mut args, &mut flags);
+
+        assert_eq!(v, 1);
+        assert_eq!(r, 2);
+        assert_eq!(everything_after, vec!["argument", "-file", "hello!", "-rrrr"]);
+        assert_eq!(parsed_args.unwrap(), vec!["program"]);
+    }
+
+    #[test]
+    fn flag_repeat_flag() {
+        let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
+        let mut args = argv.iter().map(|x| x.to_string());
+
+        let mut v;
+        let mut r;
+        let mut t;
+        let mut unused;
+
+        let mut flags = flags![
+            v: RepeatFlag,      ["-v"],
+            r: RepeatFlag,      ["-r"],
+            unused: RepeatFlag, ["-u", "--unused"],
+            t: RepeatFlag,      ["-t", "--test"]
+        ];
+
+        let parsed_args = parse_flags(&mut args, &mut flags);
+
+        assert_eq!(v, 4);
+        assert_eq!(r, 3);
+        assert_eq!(unused, 0);
+        assert_eq!(t, 1);
+        assert_eq!(parsed_args.unwrap(), vec!["program", "argument"]);
     }
 
     #[test]
@@ -398,57 +444,32 @@ mod tests {
     }
 
     #[test]
-    fn parse_everyting_after() {
-        let argv = vec!["program", "-v", "-rr", "-e", "argument", "-file", "hello!", "-rrrr"];
+    fn parse_flags_no_arguments() {
+        let argv = vec!["program", "-v", "-d"];
         let mut args = argv.iter().map(|x| x.to_string());
 
+        let program_name = args.next().unwrap();
+
+        assert_eq!(program_name, "program".to_string());
+
         let mut v;
-        let mut r;
-        let mut everything_after;
+        let mut d;
 
         let mut flags = flags![
-            v: RepeatFlag, ["-v"],
-            r: RepeatFlag, ["-r"],
-            everything_after: EverythingAfterFlag, ["-e"]
+            v: BoolFlag, ["-v"],
+            d: BoolFlag, ["-d"]
         ];
 
         let parsed_args = parse_flags(&mut args, &mut flags);
 
-        assert_eq!(v, 1);
-        assert_eq!(r, 2);
-        assert_eq!(everything_after, vec!["argument", "-file", "hello!", "-rrrr"]);
-        assert_eq!(parsed_args.unwrap(), vec!["program"]);
+        assert_eq!(d, true);
+        assert_eq!(v, true);
+        assert!(parsed_args.unwrap().is_empty());
     }
 
     #[test]
-    fn parse_repeat_flag() {
-        let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
-        let mut args = argv.iter().map(|x| x.to_string());
-
-        let mut v;
-        let mut r;
-        let mut t;
-        let mut unused;
-
-        let mut flags = flags![
-            v: RepeatFlag,      ["-v"],
-            r: RepeatFlag,      ["-r"],
-            unused: RepeatFlag, ["-u", "--unused"],
-            t: RepeatFlag,      ["-t", "--test"]
-        ];
-
-        let parsed_args = parse_flags(&mut args, &mut flags);
-
-        assert_eq!(v, 4);
-        assert_eq!(r, 3);
-        assert_eq!(unused, 0);
-        assert_eq!(t, 1);
-        assert_eq!(parsed_args.unwrap(), vec!["program", "argument"]);
-    }
-
-    #[test]
-    fn parse_subcommands() {
-        let argv = vec!["program", "-v","dump", "-d", "argument"];
+    fn parse_flags_subcommand() {
+        let argv = vec!["program", "-v", "dump", "-d", "argument"];
         let mut args = argv.iter().map(|x| x.to_string());
 
         let program_name = args.next().unwrap();
@@ -479,6 +500,27 @@ mod tests {
     }
 
     #[test]
+    fn parse_flags_subcommand_no_argument() {
+        let argv = vec!["program", "-v", "-d"];
+        let mut args = argv.iter().map(|x| x.to_string());
+
+        let program_name = args.next().unwrap();
+
+        assert_eq!(program_name, "program".to_string());
+
+        let mut v;
+
+        let mut main_flags = flags![
+            v: BoolFlag, ["-v"]
+        ];
+
+        let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
+
+        assert_eq!(v, true);
+        assert!(subcommand.is_err());
+    }
+
+    #[test]
     #[should_panic]
     #[cfg(debug_assertions)]
     fn parse_flags_malformed() {
@@ -490,7 +532,7 @@ mod tests {
             (FlagType::BoolFlag(&mut malformed), vec!["m"])
         ];
 
-        let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+        parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 
     #[test]
@@ -505,7 +547,7 @@ mod tests {
             (FlagType::BoolFlag(&mut malformed), vec!["-onedash"])
         ];
 
-        let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+        parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 
 
@@ -521,6 +563,6 @@ mod tests {
             (FlagType::BoolFlag(&mut malformed), vec!["--space bar"])
         ];
 
-        let _ = parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+        parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
 }
