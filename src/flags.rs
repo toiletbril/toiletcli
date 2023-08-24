@@ -130,7 +130,7 @@ where Args: Iterator<Item = String> {
         return Ok(false);
     }
 
-    let is_long = chars.peek() == Some(&'-');
+    let is_long = chars.peek().is_some_and(|c| *c == '-');
 
     let mut found_long = false;
     let mut first = None;
@@ -549,7 +549,6 @@ mod tests {
 
         parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
     }
-
 
     #[test]
     #[should_panic]
