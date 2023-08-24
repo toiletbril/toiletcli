@@ -4,7 +4,7 @@ readme  = "README.md"
 authors = ["toiletbril"]
 repository = "https://github.com/toiletbril/toiletcli"
 license = "MIT"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 description = "Framework for command line applications."
