@@ -4,14 +4,14 @@
 
 use std::{fmt::Display, str::FromStr, io::{Error, ErrorKind}};
 
-use crate::common::{is_underline_style_supported, is_no_color_set};
+use crate::common::{is_underline_style_supported, should_use_colors};
 
 #[inline(always)]
 fn esc_sq(code: String) -> String {
     if code.is_empty() {
         code
     } else {
-        if !is_no_color_set() {
+        if !should_use_colors() {
             #[cfg(feature = "mock_codes")]
             return format!("{{code {}}}", code);
 

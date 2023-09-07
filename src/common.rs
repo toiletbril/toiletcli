@@ -52,13 +52,16 @@ pub fn is_underline_style_supported() -> bool {
 
 static mut NO_COLOR: Option<bool> = None;
 
-/// Returns `true` if `$NO_COLOR` it set. See <https://no-color.org/>.
-pub fn is_no_color_set() -> bool {
+/// Returns `true` when:
+/// `$NO_COLOR` it set to anything
+/// `$TERM` = `dumb`
+pub fn should_use_colors() -> bool {
     unsafe {
         if let Some(value) = NO_COLOR {
             value
         } else {
-            if let Ok(_) = std::env::var("NO_COLOR") {
+            // TODO: isatty()
+            if std::env::var("NO_COLOR").is_ok() || std::env::var("TERM") == Ok("dumb".to_string()) {
                 NO_COLOR = Some(true);
                 true
             } else {
