@@ -2,11 +2,11 @@
 name    = "toiletcli"
 readme  = "README.md"
 authors = ["toiletbril"]
-repository = "https://github.com/toiletbril/toiletcli"
 license = "MIT"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2021"
 
+repository  = "https://github.com/toiletbril/toiletcli"
 description = "Framework for command line applications."
 
 include    = ["/src"]
@@ -42,3 +42,6 @@ path = "examples/colors.rs"
 opt-level = 3
 strip = true
 lto = true
+
+[dependencies]
+atty = "0.2.14"
