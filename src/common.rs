@@ -57,6 +57,8 @@ pub fn is_underline_style_supported() -> bool {
 
 static mut USE_COLORS: Option<bool> = None;
 
+/// If this function returns `false`, colors will be replaced with nothing.
+///
 /// Returns `false` when:
 /// `$NO_COLOR` it set to anything
 /// `$TERM` = `dumb`
