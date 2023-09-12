@@ -80,6 +80,11 @@ pub fn should_use_colors() -> bool {
     }
 }
 
+/// Permanently overwrite [`should_use_colors`](fn@should_use_colors) return value.
+unsafe fn overwrite_should_use_colors(value: bool) {
+    USE_COLORS = Some(value);
+}
+
 /// Gets file name from it's path.
 ///
 /// # Example
