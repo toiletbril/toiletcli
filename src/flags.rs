@@ -259,16 +259,15 @@ where Args: Iterator<Item = String> {
 
 /// Works the same way as [`parse_flags`](fn@parse_flags), but stops when it encounters the first argument.
 /// Consumes all flags before the first argument from `args` iterator, so `args` can be used again to
-/// parse the remaining contents. Will return [`Err`] if no arguments were provided.
+/// parse the remaining contents. Will return Ok(empty_string) if no arguments were provided.
 ///
 /// # Returns
 /// ## Ok
-/// First argument that is not a flag.
+/// First argument that is not a flag, or empty string when there is no arguments.
 /// Changes references passed in the enums according to parsed flags.
 ///
 /// ## Err
 /// - Unknown flag;
-/// - No arguments were provided;
 /// - No value provided for a flag that requires it;
 /// - Short flag that takes a value was combined with other flag.
 ///
@@ -313,7 +312,7 @@ where Args: Iterator<Item = String> {
         }
     }
 
-    Err("No arguments were provided".into())
+    Ok("".to_string())
 }
 
 #[cfg(test)]
@@ -509,15 +508,17 @@ mod tests {
         assert_eq!(program_name, "program".to_string());
 
         let mut v;
+        let mut d;
 
         let mut main_flags = flags![
-            v: BoolFlag, ["-v"]
+            v: BoolFlag, ["-v"],
+            d: BoolFlag, ["-d"]
         ];
 
         let subcommand = parse_flags_until_subcommand(&mut args, &mut main_flags);
 
-        assert_eq!(v, true);
-        assert!(subcommand.is_err());
+        assert_eq!(v && d, true);
+        assert!(subcommand.unwrap().is_empty());
     }
 
     #[test]
