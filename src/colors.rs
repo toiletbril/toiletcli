@@ -11,7 +11,7 @@ fn esc_sq(code: String) -> String {
     if code.is_empty() {
         code
     } else {
-        if !should_use_colors() {
+        if should_use_colors() {
             #[cfg(feature = "mock_codes")]
             return format!("{{code {}}}", code);
 

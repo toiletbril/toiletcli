@@ -1,5 +1,10 @@
 //! Common functions.
 
+extern crate atty;
+
+use atty::is;
+use atty::Stream;
+
 /// Directory characters, which would be `"/\\"` on Windows and `"/"` on POSIX.
 ///
 /// # Example
@@ -26,7 +31,7 @@ const SUPPORTED_TERMINALS: &'static [&str] = &[
     "kitty",
     "mintty",
     "iterm2",
-    "alacritty" // since 0.12.0
+    "alacritty", // since 0.12.0
 ];
 
 /// Returns `true` if current `$TERMINAL` supports underline styling.
@@ -50,22 +55,25 @@ pub fn is_underline_style_supported() -> bool {
     }
 }
 
-static mut NO_COLOR: Option<bool> = None;
+static mut USE_COLORS: Option<bool> = None;
 
-/// Returns `true` when:
+/// Returns `false` when:
 /// `$NO_COLOR` it set to anything
 /// `$TERM` = `dumb`
+/// `stderr` or `stdout` is not a tty
 pub fn should_use_colors() -> bool {
     unsafe {
-        if let Some(value) = NO_COLOR {
+        if let Some(value) = USE_COLORS {
             value
         } else {
-            // TODO: isatty()
-            if std::env::var("NO_COLOR").is_ok() || std::env::var("TERM") == Ok("dumb".to_string()) {
-                NO_COLOR = Some(true);
+            let is_atty = is(Stream::Stderr) && is(Stream::Stdout);
+            let use_color = !(std::env::var("NO_COLOR").is_ok() || std::env::var("TERM") == Ok("dumb".to_string()));
+
+            if is_atty && use_color {
+                USE_COLORS = Some(true);
                 true
             } else {
-                NO_COLOR = Some(false);
+                USE_COLORS = Some(false);
                 false
             }
         }
@@ -109,9 +117,20 @@ mod tests {
 
     #[test]
     fn program_name() {
-        let path = if cfg!(windows) { "toilet\\bin\\program.exe" } else { "toilet/bin/program" };
+        let path = if cfg!(windows) {
+            "toilet\\bin\\program.exe"
+        } else {
+            "toilet/bin/program"
+        };
         let name = name_from_path(&path.to_string());
 
-        assert_eq!(name, if cfg!(windows) { "program.exe" } else { "program" });
+        assert_eq!(
+            name,
+            if cfg!(windows) {
+                "program.exe"
+            } else {
+                "program"
+            }
+        );
     }
 }
