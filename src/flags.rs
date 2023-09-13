@@ -130,7 +130,7 @@ where Args: Iterator<Item = String> {
         return Ok(false);
     }
 
-    let is_long = chars.peek().is_some_and(|c| *c == '-');
+    let is_long = chars.peek() == Some(&'-');
 
     let mut found_long = false;
     let mut first = None;
