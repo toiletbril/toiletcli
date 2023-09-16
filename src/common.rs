@@ -1,5 +1,7 @@
 //! Common functions.
 
+use std::sync::Once;
+
 extern crate atty;
 
 use atty::is;
@@ -25,6 +27,7 @@ use atty::Stream;
 pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 
 static mut UNDERLINE_SUPPORTED: Option<bool> = None;
+static mut UNDERLINE_SUPPORTED_INIT: Once = Once::new();
 
 const SUPPORTED_TERMINALS: &'static [&str] = &[
     "vte",
@@ -35,27 +38,28 @@ const SUPPORTED_TERMINALS: &'static [&str] = &[
 ];
 
 /// Returns `true` if current `$TERMINAL` supports underline styling.
-/// Calling this first time is thread unsafe, since I don't plan on using this from separate threads.
 pub fn is_underline_style_supported() -> bool {
     unsafe {
         if let Some(value) = UNDERLINE_SUPPORTED {
             value
         } else {
-            if let Ok(terminal) = std::env::var("TERMINAL") {
-                for supported in SUPPORTED_TERMINALS {
-                    if terminal.contains(supported) {
-                        UNDERLINE_SUPPORTED = Some(true);
-                        return true;
-                    }
-                }
-            }
-            UNDERLINE_SUPPORTED = Some(false);
-            return false;
+            let is_supported = if let Ok(terminal) = std::env::var("TERMINAL") {
+                    SUPPORTED_TERMINALS.iter().any(|&supported| terminal.contains(supported))
+                } else {
+                    false
+                };
+
+            UNDERLINE_SUPPORTED_INIT.call_once(|| {
+                UNDERLINE_SUPPORTED = Some(is_supported);
+            });
+
+            is_supported
         }
     }
 }
 
 static mut USE_COLORS: Option<bool> = None;
+static mut USE_COLORS_INIT: Once = Once::new();
 
 /// If this function returns `false`, colors will be replaced with nothing.
 ///
@@ -71,13 +75,13 @@ pub fn should_use_colors() -> bool {
             let is_atty = is(Stream::Stderr) && is(Stream::Stdout);
             let use_color = !(std::env::var("NO_COLOR").is_ok() || std::env::var("TERM") == Ok("dumb".to_string()));
 
-            if is_atty && use_color {
-                USE_COLORS = Some(true);
-                true
-            } else {
-                USE_COLORS = Some(false);
-                false
-            }
+            let should_use_colors = is_atty && use_color;
+
+            USE_COLORS_INIT.call_once(|| {
+                USE_COLORS = Some(should_use_colors);
+            });
+
+            should_use_colors
         }
     }
 }
@@ -85,6 +89,21 @@ pub fn should_use_colors() -> bool {
 /// Permanently overwrite [`should_use_colors`](fn@should_use_colors) return value.
 pub unsafe fn overwrite_should_use_colors(value: bool) {
     USE_COLORS = Some(value);
+}
+
+#[inline(always)]
+pub fn is_stdin_a_tty() -> bool {
+    is(Stream::Stdin)
+}
+
+#[inline(always)]
+pub fn is_stdout_a_tty() -> bool {
+    is(Stream::Stdout)
+}
+
+#[inline(always)]
+pub fn is_stderr_a_tty() -> bool {
+    is(Stream::Stderr)
 }
 
 /// Gets file name from it's path.
