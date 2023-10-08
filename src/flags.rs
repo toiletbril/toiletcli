@@ -95,16 +95,16 @@ macro_rules! flags {
 // Check flags in flag array for malformed flags in debug builds.
 #[cfg(debug_assertions)]
 fn check_flags(flags: &[Flag]) {
-    const SPACE_HELP: &'static str =
+    const SPACE_HELP: &str =
         "Flags should not contain whitespaces";
-    const LEN_HELP: &'static str =
+    const LEN_HELP: &str =
         "Flags should be made of either a single dash with one letter, like '-h', or two dashes with a word, like '--help'";
-    const LONG_HELP: &'static str =
+    const LONG_HELP: &str =
         "Long flags should start with two dashes, like '--help' or '--color'";
-    const SHORT_HELP: &'static str =
+    const SHORT_HELP: &str =
         "Flags should start with '-' or '--', like '--help' or '-h'";
 
-    for (_, flag_strings) in &*flags {
+    for (_, flag_strings) in flags {
         for flag in flag_strings {
             assert!(!flag.contains(char::is_whitespace),
                 "Invalid flag '{}'. {}", flag, SPACE_HELP);
@@ -135,7 +135,7 @@ where Args: Iterator<Item = String> {
     let mut found_long = false;
     let mut first = None;
 
-    while let Some(ch) = chars.next() {
+    for ch in chars {
         let mut found_short = false;
 
         for (flag_value, flag_strings) in &mut *flags {
@@ -184,7 +184,7 @@ where Args: Iterator<Item = String> {
                     }
 
                     FlagType::EverythingAfterFlag(value) => {
-                        while let Some(next_arg) = args.next() {
+                        for next_arg in args.by_ref() {
                             value.push(next_arg.clone());
                         }
 
@@ -244,7 +244,7 @@ where Args: Iterator<Item = String> {
     let mut parsed_arguments: Vec<String> = vec![];
 
     #[cfg(debug_assertions)]
-    check_flags(&flags);
+    check_flags(flags);
 
     while let Some(arg) = args.next() {
         let is_flag = parse_arg(&arg, args, flags)?;
@@ -302,7 +302,7 @@ where Args: Iterator<Item = String> {
 pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<String, String>
 where Args: Iterator<Item = String> {
     #[cfg(debug_assertions)]
-    check_flags(&flags);
+    check_flags(flags);
 
     while let Some(arg) = args.next() {
         let is_flag = parse_arg(&arg, args, flags)?;

@@ -10,16 +10,14 @@ use crate::common::{is_underline_style_supported, should_use_colors};
 fn esc_sq(code: String) -> String {
     if code.is_empty() {
         code
-    } else {
-        if should_use_colors() {
-            #[cfg(feature = "mock_codes")]
-            return format!("{{code {}}}", code);
+    } else if should_use_colors() {
+        #[cfg(feature = "mock_codes")]
+        return format!("{{code {}}}", code);
 
-            #[cfg(not(feature = "mock_codes"))]
-            return format!("\u{001b}[{}m", code);
-        } else {
-            "".into()
-        }
+        #[cfg(not(feature = "mock_codes"))]
+        return format!("\u{001b}[{}m", code);
+    } else {
+        "".into()
     }
 }
 
@@ -35,9 +33,10 @@ fn esc_sq(code: String) -> String {
 ///          Color::Red, Color::Blue.bg());
 /// ```
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Color {
     // Does nothing.
+    #[default]
     None         = 255,
     Reset        = 254,
     Black        = 0,
@@ -60,12 +59,6 @@ pub enum Color {
     Byte(u8),
     /// RGB color.
     RGB(u8, u8, u8)
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Color::None
-    }
 }
 
 #[inline(always)]
@@ -272,9 +265,10 @@ impl FromStr for Color {
 ///          Style::Bold, Style::Italic);
 /// ```
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum Style {
     // Does nothing.
+    #[default]
     None               = 255,
     // Resets all colors and styles.
     Reset              = 0,
@@ -292,12 +286,6 @@ pub enum Style {
 impl Style {
     fn code(&self) -> String {
         format!("{}", *self as u8)
-    }
-}
-
-impl Default for Style {
-    fn default() -> Self {
-        Style::None
     }
 }
 
@@ -336,19 +324,14 @@ impl FromStr for Style {
 
 /// Underline style codes. Will not be used on incompatible terminals.
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub enum UnderlineStyle {
+    #[default]
     Straight = 1,
     Double   = 2,
     Curly    = 3,
     Dotted   = 4,
     Dashed   = 5,
-}
-
-impl Default for UnderlineStyle {
-    fn default() -> Self {
-        UnderlineStyle::Straight
-    }
 }
 
 impl UnderlineStyle {
@@ -418,13 +401,14 @@ fn concat_codes(code_string: &mut String, style: &String) {
 /// println!("{}RGB purple with RGB curly green underline!{}",
 ///          weird_style, Style::Reset);
 /// ```
+#[derive(Default)]
 pub struct StyleBuilder {
     style: TerminalStyle
 }
 
 impl StyleBuilder {
     pub fn new() -> Self {
-        StyleBuilder { style: Default::default() }
+        Self::default()
     }
 
     pub fn foreground(&mut self, color: Color) -> &mut Self {

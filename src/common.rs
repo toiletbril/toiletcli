@@ -29,7 +29,7 @@ pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 static mut UNDERLINE_SUPPORTED: Option<bool> = None;
 static mut UNDERLINE_SUPPORTED_INIT: Once = Once::new();
 
-const SUPPORTED_TERMINALS: &'static [&str] = &[
+const SUPPORTED_TERMINALS: &[&str] = &[
     "vte",
     "kitty",
     "mintty",
@@ -87,6 +87,9 @@ pub fn should_use_colors() -> bool {
 }
 
 /// Permanently overwrite [`should_use_colors`](fn@should_use_colors) return value.
+/// # Safety
+/// This function is not safe in multithreaded environments, since it directly writes to static
+/// variable.
 pub unsafe fn overwrite_should_use_colors(value: bool) {
     USE_COLORS = Some(value);
 }
@@ -122,7 +125,7 @@ pub fn name_from_path(path: &String) -> String {
             return String::from(path.split_at(path.len() - i).1);
         }
     }
-    return String::from(path);
+    String::from(path)
 }
 
 /// Compile time assertion.
