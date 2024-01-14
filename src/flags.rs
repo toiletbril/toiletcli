@@ -8,6 +8,9 @@
 //! Flags which take a value can't be combined, and they don't use an equals punctuation (or similar) to separate the key and value.
 //! E.g. no `-k=<value>`. The intended usage is `-k <value>`, with a key `-k` and a value of `<value>`.
 
+use std::fmt;
+use std::error::Error;
+
 /// Enum that contains a mutable reference to be modified.
 ///
 /// # Example
@@ -37,6 +40,31 @@ pub enum FlagType<'a> {
     /// Requires at least one value.
     /// Will include everything after that flag, treating all flags after that one as arguments.
     EverythingAfterFlag(&'a mut Vec<String>),
+}
+
+#[derive(Debug)]
+pub enum FlagErrorType {
+    CannotCombine,
+    NoValueProvided,
+    Unknown,
+}
+
+#[derive(Debug)]
+pub struct FlagError {
+    pub error_type: FlagErrorType,
+    pub flag: String,
+}
+
+impl Error for FlagError {}
+
+impl fmt::Display for FlagError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.error_type {
+            FlagErrorType::CannotCombine   => write!(f, "Flag {} requires a value and can't be combined", self.flag),
+            FlagErrorType::NoValueProvided => write!(f, "No value provided for {}", self.flag),
+            FlagErrorType::Unknown         => write!(f, "Unknown flag {}", self.flag),
+        }
+    }
 }
 
 /// A pair with a reference to be modified and flag aliases.
@@ -122,7 +150,7 @@ fn check_flags(flags: &[Flag]) {
 }
 
 // -> Result<IsFlag, String>
-fn parse_arg<Args>(arg: &String, args: &mut Args, flags: &mut [Flag]) -> Result<bool, String>
+fn parse_arg<Args>(arg: &String, args: &mut Args, flags: &mut [Flag]) -> Result<bool, FlagError>
 where Args: Iterator<Item = String> {
     let mut chars = arg.chars().peekable();
 
@@ -133,7 +161,7 @@ where Args: Iterator<Item = String> {
     let is_long = chars.peek() == Some(&'-');
 
     let mut found_long = false;
-    let mut first = None;
+    let mut last_short_flag_with_value: Option<char> = None;
 
     for ch in chars {
         let mut found_short = false;
@@ -152,8 +180,12 @@ where Args: Iterator<Item = String> {
                 }
 
                 // Combining short flags that need a value is not allowed
-                if let Some(first) = first {
-                    return Err(format!("Flag '-{}' requires a value and can't be combined", first));
+                if let Some(first) = last_short_flag_with_value {
+                    let error = FlagError {
+                        error_type: FlagErrorType::CannotCombine,
+                        flag: format!("-{}", first),
+                    };
+                    return Err(error);
                 }
 
                 match flag_value {
@@ -164,9 +196,13 @@ where Args: Iterator<Item = String> {
                     FlagType::StringFlag(value) => {
                         if let Some(next_arg) = args.next() {
                             **value = next_arg.clone();
-                            first = Some(ch);
+                            last_short_flag_with_value = Some(ch);
                         } else {
-                            return Err(format!("No value provided for '{}'", flag));
+                            let error = FlagError {
+                                error_type: FlagErrorType::NoValueProvided,
+                                flag: flag.to_string(),
+                            };
+                            return Err(error);
                         }
                     }
 
@@ -177,9 +213,13 @@ where Args: Iterator<Item = String> {
                     FlagType::ManyFlag(value) => {
                         if let Some(next_arg) = args.next() {
                             value.push(next_arg.clone());
-                            first = Some(ch);
+                            last_short_flag_with_value = Some(ch);
                         } else {
-                            return Err(format!("No value provided for '{}'", flag));
+                            let error = FlagError {
+                                error_type: FlagErrorType::NoValueProvided,
+                                flag: flag.to_string(),
+                            };
+                            return Err(error);
                         }
                     }
 
@@ -187,9 +227,12 @@ where Args: Iterator<Item = String> {
                         for next_arg in args.by_ref() {
                             value.push(next_arg.clone());
                         }
-
                         if value.is_empty() {
-                            return Err(format!("No value provided for '{}'", flag));
+                            let error = FlagError {
+                                error_type: FlagErrorType::NoValueProvided,
+                                flag: flag.to_string(),
+                            };
+                            return Err(error);
                         }
                     }
                 }
@@ -197,14 +240,18 @@ where Args: Iterator<Item = String> {
         }
         if found_long {
             break;
-        }
-
-        if is_long && !found_long {
-            return Err(format!("Unknown long flag '{}'", arg));
-        }
-
-        if !found_short {
-            return Err(format!("Unknown flag '-{}'", ch));
+        } else if is_long && !found_long {
+            let error = FlagError {
+                error_type: FlagErrorType::Unknown,
+                flag: arg.to_string()
+            };
+            return Err(error);
+        } else if !found_short {
+            let error = FlagError {
+                error_type: FlagErrorType::Unknown,
+                flag: format!("-{}", ch),
+            };
+            return Err(error);
         }
     }
 
@@ -239,7 +286,7 @@ where Args: Iterator<Item = String> {
 ///
 /// let args = parse_flags(&mut args(), &mut flags);
 /// ```
-pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, String>
+pub fn parse_flags<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<Vec<String>, FlagError>
 where Args: Iterator<Item = String> {
     let mut parsed_arguments: Vec<String> = vec![];
 
@@ -299,7 +346,7 @@ where Args: Iterator<Item = String> {
 ///
 /// let subcommand_args = parse_flags(&mut args, &mut sub_flags);
 /// ```
-pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<String, String>
+pub fn parse_flags_until_subcommand<Args>(args: &mut Args, flags: &mut [Flag]) -> Result<String, FlagError>
 where Args: Iterator<Item = String> {
     #[cfg(debug_assertions)]
     check_flags(flags);
