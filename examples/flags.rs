@@ -14,11 +14,11 @@ fn main() -> () {
     let mut with_dash;
 
     let mut flags = flags!(
-        files: ManyFlag,       ["--file", "-f"],
+        files: ManyFlag,       ["-f", "--file"],
+        big: BoolFlag,         ["-b", "--big"],
+        small: BoolFlag,       ["-s", "--small"],
+        repeat: RepeatFlag,    ["-r", "--repeat"],
         value: StringFlag,     ["--value"],
-        big: BoolFlag,         ["--big", "-b"],
-        small: BoolFlag,       ["--small", "-s"],
-        repeat: RepeatFlag,    ["--repeat", "-r"],
         with_dash: StringFlag, ["--with-dash"]
     );
 

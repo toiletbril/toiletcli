@@ -51,7 +51,7 @@ fn main() -> ExitCode {
     let mut color;
 
     let mut flags = toiletcli::flags!(
-        color: StringFlag,   ["--color", "-c"],
+        color: StringFlag,   ["-c", "--color"],
         show_help: BoolFlag, ["--help"]
     );
 
