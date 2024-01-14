@@ -52,6 +52,7 @@ pub enum FlagErrorType {
 #[derive(Debug)]
 pub struct FlagError {
     pub error_type: FlagErrorType,
+    /// Contains the flag that caused this error.
     pub flag: String,
 }
 
