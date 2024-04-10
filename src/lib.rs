@@ -5,10 +5,10 @@
 //!
 //! Complete overview can be found in the documentation for each module.
 
-pub mod common;
-#[cfg(feature = "flags")]
-pub mod flags;
 #[cfg(feature = "colors")]
 pub mod colors;
+pub mod common;
 #[cfg(feature = "escapes")]
 pub mod escapes;
+#[cfg(feature = "flags")]
+pub mod flags;
