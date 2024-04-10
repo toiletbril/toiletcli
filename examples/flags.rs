@@ -32,6 +32,11 @@ fn main() -> ()
 
   let args = args.unwrap();
 
-  println!("Parsed flags: {:?}", flags);
-  println!("Arguments: {:?}", args);
+  println!("Arguments: {:#?}", args);
+  println!("-f, --file:      {:?}", files);
+  println!("-b, --big:       {:?}", big);
+  println!("-s, --small:     {:?}", small);
+  println!("-r, --repeat:    {:?}", repeat);
+  println!("    --value:     {:?}", value);
+  println!("    --with-dash: {:?}", with_dash);
 }
