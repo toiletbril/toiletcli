@@ -240,10 +240,16 @@ fn parse_arg<Args>(arg: &String,
 
         match search_flag_kind {
           FlagType::BoolFlag(value) => {
+            // A value with a boolean flag? Phew.
             if arg_val.is_some() {
+              let flag_name = if !is_long {
+                format!("-{}", ch)
+              } else {
+                arg_flag.to_string()
+              };
               let error = FlagError { error_type:
                                         FlagErrorType::ExtraValueProvided,
-                                      flag: format!("-{}", ch) };
+                                      flag: flag_name };
               return Err(error);
             }
             **value = true;
