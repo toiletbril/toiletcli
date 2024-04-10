@@ -44,11 +44,13 @@ impl<'a> Display for System<'a>
   }
 }
 
-/// Cursor movement.
+/// Cursor behavior.
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Cursor
 {
+  Hide,
+  Show,
   /// Save cursor position (SCO).
   Save,
   /// Restore cursor position (SCO).
@@ -70,6 +72,8 @@ impl Cursor
   fn code(&self) -> String
   {
     match self {
+      Cursor::Hide => "?25l".to_string(),
+      Cursor::Show => "?25h".to_string(),
       Cursor::Save => "s".to_string(),
       Cursor::Restore => "u".to_string(),
       Cursor::Reset => "H".to_string(),
