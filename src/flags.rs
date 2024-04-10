@@ -6,10 +6,13 @@
 //! Short flags of [`BoolFlag`](type@FlagType::BoolFlag) type can be combined,
 //! eg. `-vAsn` will set `true` to all `-v`, `-A`, `-s`, `-n` flags.
 //!
-//! Flags which take a value can't be combined, and they don't use an equals
-//! punctuation (or similar) to separate the key and value.
-//! E.g. no `-k=<value>`. The intended usage is `-k <value>`, with a key `-k`
-//! and a value of `<value>`.
+//! Flags which take a value can't be combined.
+//!
+//! The intended usage of flags which take a value is `-k <value>`/`-k=<value>`,
+//! with a key `-k` and a value of `<value>`.
+//!
+//! After encountering a special flag `--`, the rest of the input will be
+//! treated as arguments.
 
 use std::error::Error;
 use std::fmt;
@@ -43,10 +46,6 @@ pub enum FlagType<'a>
   /// Will count the number of times a letter is repeated. Long version
   /// increases count by 1.
   RepeatFlag(&'a mut usize),
-  /// Requires at least one value.
-  /// Will include everything after that flag, treating all flags after that
-  /// one as arguments.
-  EverythingAfterFlag(&'a mut Vec<String>),
 }
 
 #[derive(Debug)]
@@ -140,13 +139,14 @@ macro_rules! flags {
 #[cfg(debug_assertions)]
 fn check_flags(flags: &[Flag])
 {
-  const SPACE_HELP: &str = "Flags should not contain whitespaces";
+  const SPACE_HELP: &str = "Flags should not contain whitespace.";
   const LEN_HELP: &str =
-        "Flags should be made of either a single dash with one letter, like '-h', or two dashes with a word, like '--help'";
+    "Flags should be made of either a single dash with one letter, like \
+        '-h', or two dashes with a word, like '--help'.";
   const LONG_HELP: &str =
-    "Long flags should start with two dashes, like '--help' or '--color'";
+    "Long flags should start with two dashes, like '--help' or '--color'.";
   const SHORT_HELP: &str =
-    "Flags should start with '-' or '--', like '--help' or '-h'";
+    "Flags should start with '-' or '--', like '--help' or '-h'.";
 
   for (_, flag_strings) in flags {
     for flag in flag_strings {
@@ -170,61 +170,89 @@ fn check_flags(flags: &[Flag])
   }
 }
 
-// -> Result<IsFlag, String>
 fn parse_arg<Args>(arg: &String,
                    args: &mut Args,
                    flags: &mut [Flag])
                    -> Result<bool, FlagError>
   where Args: Iterator<Item = String>
 {
-  let mut chars = arg.chars().peekable();
+  // Split flags that look like `-k=value` to key and value. Otherwise we'll use
+  // the next argument from the iterator as key value.
+  let (arg_flag, arg_val): (&str, Option<&str>) =
+    if let Some(pos) = arg.find('=') {
+      let (f, v) = arg.split_at(pos);
+      (f, Some(v.strip_prefix('=').expect("unreachable")))
+    } else {
+      (arg, None)
+    };
 
-  if chars.next() != Some('-') {
+  // Decide whether arg is a long flag or short flag. We want chars to start
+  // with letters, with all dashed skipped over.
+  let mut arg_chars = arg_flag.chars().peekable();
+  if arg_chars.next() != Some('-') {
     return Ok(false);
   }
-
-  let is_long = chars.peek() == Some(&'-');
+  let is_long = if arg_chars.peek() == Some(&'-') {
+    arg_chars.next();
+    true
+  } else {
+    false
+  };
 
   let mut found_long = false;
   let mut last_short_flag_with_value: Option<char> = None;
 
-  for ch in chars {
+  // This iterates the characters of the arg, in case this arg consists of
+  // several short flags. If this is a long flag, we'll just break out after the
+  // first loop.
+  for ch in arg_chars {
     let mut found_short = false;
 
-    for (flag_value, flag_strings) in &mut *flags {
-      for flag in flag_strings {
-        // Short flag is a string with a single dash and a character
-        if flag.len() == 2 && flag.ends_with(ch) {
-          found_short = true;
-        }
-        // Long flag starts with 2 dashes, and should just match entirely
-        else if ch == '-' && arg == *flag {
+    // Linear search over the provided flags vector.
+    for (search_flag_kind, search_flag_names) in &mut *flags {
+      for search_flag_name in search_flag_names {
+        // search_flag_name either looks like --flag or -f. arg_flag is a long
+        // flag, we need to compare it to the search_flag_name string.
+        // Otherwise, it's a single character out of the list, that looks like
+        // `-vAsn`. So, check if short flag ends with that character.
+        if is_long && arg_flag == *search_flag_name {
           found_long = true;
+        } else if !is_long &&
+                  search_flag_name.len() == 2 &&
+                  search_flag_name.ends_with(ch)
+        {
+          found_short = true;
         } else {
+          // We didn't find anything.
           continue;
         }
 
-        // Combining short flags that need a value is not allowed
+        // Flags that take a value cannot be combined.
         if let Some(first) = last_short_flag_with_value {
           let error = FlagError { error_type: FlagErrorType::CannotCombine,
                                   flag: format!("-{}", first) };
           return Err(error);
         }
 
-        match flag_value {
+        match search_flag_kind {
           FlagType::BoolFlag(value) => {
             **value = true;
+            break;
           }
 
           FlagType::StringFlag(value) => {
-            if let Some(next_arg) = args.next() {
-              **value = next_arg.clone();
-              last_short_flag_with_value = Some(ch);
+            if let Some(v) = arg_val {
+              **value = v.to_string();
+            } else if let Some(next_arg) = args.next() {
+              value.clone_from(&next_arg);
             } else {
               let error = FlagError { error_type:
                                         FlagErrorType::NoValueProvided,
-                                      flag: flag.to_string() };
+                                      flag: arg_flag.to_string() };
               return Err(error);
+            }
+            if !is_long {
+              last_short_flag_with_value = Some(ch);
             }
           }
 
@@ -232,39 +260,35 @@ fn parse_arg<Args>(arg: &String,
             **value += 1;
           }
 
-          FlagType::ManyFlag(value) => {
-            if let Some(next_arg) = args.next() {
-              value.push(next_arg.clone());
-              last_short_flag_with_value = Some(ch);
+          FlagType::ManyFlag(vec) => {
+            if let Some(v) = arg_val {
+              vec.push(v.to_string());
+            } else if let Some(next_arg) = args.next() {
+              vec.push(next_arg.clone());
             } else {
               let error = FlagError { error_type:
                                         FlagErrorType::NoValueProvided,
-                                      flag: flag.to_string() };
+                                      flag: arg_flag.to_string() };
               return Err(error);
             }
-          }
-
-          FlagType::EverythingAfterFlag(value) => {
-            for next_arg in args.by_ref() {
-              value.push(next_arg.clone());
-            }
-            if value.is_empty() {
-              let error = FlagError { error_type:
-                                        FlagErrorType::NoValueProvided,
-                                      flag: flag.to_string() };
-              return Err(error);
+            if !is_long {
+              last_short_flag_with_value = Some(ch);
             }
           }
         }
       }
     }
+
     if found_long {
       break;
-    } else if is_long && !found_long {
+    } else if is_long {
       let error =
         FlagError { error_type: FlagErrorType::Unknown, flag: arg.to_string() };
       return Err(error);
-    } else if !found_short {
+    }
+
+    // We saw every character and haven't matched anything.
+    if !found_short {
       let error = FlagError { error_type: FlagErrorType::Unknown,
                               flag: format!("-{}", ch) };
       return Err(error);
@@ -308,15 +332,19 @@ pub fn parse_flags<Args>(args: &mut Args,
                          -> Result<Vec<String>, FlagError>
   where Args: Iterator<Item = String>
 {
-  let mut parsed_arguments: Vec<String> = vec![];
-
   #[cfg(debug_assertions)]
   check_flags(flags);
 
-  while let Some(arg) = args.next() {
-    let is_flag = parse_arg(&arg, args, flags)?;
+  let mut parsed_arguments: Vec<String> = vec![];
+  let mut ignore_rest = false;
 
-    if !is_flag {
+  while let Some(arg) = args.next() {
+    // Treat the rest of the input as arguments after encountering '--'.
+    if arg == "--" {
+      ignore_rest = true;
+      continue;
+    }
+    if ignore_rest || !parse_arg(&arg, args, flags)? {
       parsed_arguments.push(arg);
     }
   }
@@ -414,42 +442,40 @@ mod tests
   #[test]
   fn flag_everything_after()
   {
-    let argv = vec!["program", "-v", "-rr", "-e", "argument", "-file",
+    let argv = vec!["program", "-v", "-rr", "--", "argument", "-file",
                     "hello!", "-rrrr"];
     let mut args = argv.iter().map(|x| x.to_string());
 
     let mut v;
     let mut r;
-    let mut everything_after;
 
     let mut flags = flags![
         v: RepeatFlag, ["-v"],
-        r: RepeatFlag, ["-r"],
-        everything_after: EverythingAfterFlag, ["-e"]
+        r: RepeatFlag, ["-r"]
     ];
 
     let parsed_args = parse_flags(&mut args, &mut flags);
 
+    assert_eq!(parsed_args.unwrap(),
+               vec!["program", "argument", "-file", "hello!", "-rrrr"]);
     assert_eq!(v, 1);
     assert_eq!(r, 2);
-    assert_eq!(everything_after, vec!["argument", "-file", "hello!", "-rrrr"]);
-    assert_eq!(parsed_args.unwrap(), vec!["program"]);
   }
 
   #[test]
   fn flag_repeat_flag()
   {
-    let argv = vec!["program", "-vvvv", "-rrr", "--test", "argument"];
+    let argv = vec!["program", "-vvvv", "-eee", "--test", "argument"];
     let mut args = argv.iter().map(|x| x.to_string());
 
     let mut v;
-    let mut r;
+    let mut e;
     let mut t;
     let mut unused;
 
     let mut flags = flags![
         v: RepeatFlag,      ["-v"],
-        r: RepeatFlag,      ["-r"],
+        e: RepeatFlag,      ["-e"],
         unused: RepeatFlag, ["-u", "--unused"],
         t: RepeatFlag,      ["-t", "--test"]
     ];
@@ -457,10 +483,43 @@ mod tests
     let parsed_args = parse_flags(&mut args, &mut flags);
 
     assert_eq!(v, 4);
-    assert_eq!(r, 3);
+    assert_eq!(e, 3);
     assert_eq!(unused, 0);
     assert_eq!(t, 1);
     assert_eq!(parsed_args.unwrap(), vec!["program", "argument"]);
+  }
+  #[test]
+  fn parse_flags_equals()
+  {
+    let argv = vec!["program",
+                    "arg_one",
+                    "-s=test1",
+                    "arg_two",
+                    "--long=test2",
+                    "--many=first",
+                    "arg_three",
+                    "--many",
+                    "second",
+                    "arg_four",];
+    let mut args = argv.iter().map(|x| x.to_string());
+
+    let mut s;
+    let mut s2;
+    let mut m;
+
+    let mut flags = flags![
+        s: StringFlag,  ["-s"],
+        s2: StringFlag, ["--long"],
+        m: ManyFlag,    ["--many"]
+    ];
+
+    let parsed_args = parse_flags(&mut args, &mut flags).unwrap();
+
+    assert_eq!(parsed_args,
+               vec!["program", "arg_one", "arg_two", "arg_three", "arg_four"]);
+    assert_eq!(s, "test1");
+    assert_eq!(s2, "test2");
+    assert_eq!(m, vec!["first", "second"]);
   }
 
   #[test]
@@ -636,6 +695,23 @@ mod tests
 
     let mut flags =
       vec![(FlagType::BoolFlag(&mut malformed), vec!["--space bar"])];
+
+    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  #[cfg(debug_assertions)]
+  fn parse_flags_cant_combine()
+  {
+    let args_vector =
+      vec!["program".to_string(), "-sa".to_string(), "test".to_string()];
+
+    let mut s = String::new();
+    let mut a = false;
+
+    let mut flags = vec![(FlagType::StringFlag(&mut s), vec!["-s"]),
+                         (FlagType::BoolFlag(&mut a), vec!["-a"])];
 
     parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
   }

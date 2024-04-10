@@ -29,11 +29,8 @@ pub const DIR_CHARS: &str = if cfg!(windows) { "\\/" } else { "/" };
 static mut UNDERLINE_SUPPORTED: Option<bool> = None;
 static mut UNDERLINE_SUPPORTED_INIT: Once = Once::new();
 
-const SUPPORTED_TERMINALS: &[&str] = &["vte",
-                                       "kitty",
-                                       "mintty",
-                                       "iterm2",
-                                       "alacritty" /* since 0.12.0 */];
+const SUPPORTED_TERMINALS: &[&str] =
+  &["vte", "kitty", "mintty", "iterm2", "alacritty" /* since 0.12.0 */];
 
 /// Returns `true` if current `$TERMINAL` supports underline styling.
 pub fn is_underline_style_supported() -> bool
