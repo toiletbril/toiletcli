@@ -53,6 +53,7 @@ pub enum FlagErrorType
 {
   CannotCombine,
   NoValueProvided,
+  ExtraValueProvided,
   Unknown,
 }
 
@@ -76,6 +77,9 @@ impl fmt::Display for FlagError
       }
       FlagErrorType::NoValueProvided => {
         write!(f, "No value provided for {}", self.flag)
+      }
+      FlagErrorType::ExtraValueProvided => {
+        write!(f, "Flag {} does not take a value", self.flag)
       }
       FlagErrorType::Unknown => write!(f, "Unknown flag {}", self.flag),
     }
@@ -236,6 +240,12 @@ fn parse_arg<Args>(arg: &String,
 
         match search_flag_kind {
           FlagType::BoolFlag(value) => {
+            if arg_val.is_some() {
+              let error = FlagError { error_type:
+                                        FlagErrorType::ExtraValueProvided,
+                                      flag: format!("-{}", ch) };
+              return Err(error);
+            }
             **value = true;
             break;
           }
@@ -278,10 +288,10 @@ fn parse_arg<Args>(arg: &String,
         }
       }
     }
-
     if found_long {
       break;
-    } else if is_long {
+    }
+    if is_long {
       let error =
         FlagError { error_type: FlagErrorType::Unknown, flag: arg.to_string() };
       return Err(error);
@@ -712,6 +722,20 @@ mod tests
 
     let mut flags = vec![(FlagType::StringFlag(&mut s), vec!["-s"]),
                          (FlagType::BoolFlag(&mut a), vec!["-a"])];
+
+    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  #[cfg(debug_assertions)]
+  fn parse_flags_extra_value()
+  {
+    let args_vector = vec!["program".to_string(), "-s=test".to_string()];
+
+    let mut s = false;
+
+    let mut flags = vec![(FlagType::BoolFlag(&mut s), vec!["-s"])];
 
     parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
   }
