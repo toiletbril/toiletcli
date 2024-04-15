@@ -361,6 +361,7 @@ pub fn parse_flags<Args>(args: &mut Args,
       ignore_rest = true;
       continue;
     }
+    // Treat '-' as an argument, otherwise try to parse a flag.
     if ignore_rest || arg == "-" || !parse_arg(&arg, args, flags)? {
       parsed_arguments.push(arg);
     }
@@ -421,9 +422,12 @@ pub fn parse_flags_until_subcommand<Args>(args: &mut Args,
   check_flags(flags);
 
   while let Some(arg) = args.next() {
-    let is_flag = parse_arg(&arg, args, flags)?;
-
-    if !is_flag {
+    // Return the next argument if we encountered '--'.
+    if arg == "--" {
+      return Ok(args.next().unwrap_or("".to_string()));
+    }
+    // Treat '-' as an argument, otherwise try to parse a flag.
+    if arg == "-" || !parse_arg(&arg, args, flags)? {
       return Ok(arg);
     }
   }
