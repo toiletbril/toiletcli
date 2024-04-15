@@ -11,20 +11,17 @@ use std::{
 
 use crate::common::{is_underline_style_supported, should_use_colors};
 
-#[inline(always)]
-fn esc_sq(code: String) -> String
+fn escape(code: String) -> String
 {
-  if code.is_empty() {
-    code
-  } else if should_use_colors() {
-    #[cfg(feature = "mock_codes")]
-    return format!("{{code {}}}", code);
-
-    #[cfg(not(feature = "mock_codes"))]
-    return format!("\u{001b}[{}m", code);
-  } else {
-    "".into()
+  if code.is_empty() || !should_use_colors() {
+    return "".to_string();
   }
+
+  if cfg!(feature = "mock_codes") {
+    return format!("{{code {}}}", code);
+  }
+
+  format!("\u{001b}[{}m", code)
 }
 
 /// ANSI, RGB, 8-bit colors. [`Display`](trait@Display) writes foreground color.
@@ -208,19 +205,19 @@ impl Color
   /// Returns foreground escape sequence for this color.
   pub fn fg(&self) -> String
   {
-    esc_sq(self.fg_code())
+    escape(self.fg_code())
   }
 
   /// Returns background escape sequence for this color.
   pub fn bg(&self) -> String
   {
-    esc_sq(self.bg_code())
+    escape(self.bg_code())
   }
 
   /// Returns underline escape sequence for this color.
   pub fn ul(&self) -> String
   {
-    esc_sq(self.ul_code())
+    escape(self.ul_code())
   }
 }
 
@@ -324,7 +321,7 @@ impl Display for Style
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
   {
     if *self != Style::None {
-      write!(f, "{}", esc_sq((*self as u8).to_string()))
+      write!(f, "{}", escape((*self as u8).to_string()))
     } else {
       Ok(())
     }
@@ -377,7 +374,7 @@ impl Display for UnderlineStyle
 {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
   {
-    write!(f, "{}", esc_sq(self.code()))
+    write!(f, "{}", escape(self.code()))
   }
 }
 
@@ -413,12 +410,11 @@ impl Display for TerminalStyle
 {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
   {
-    write!(f, "{}", esc_sq(self.printable_string.clone()))
+    write!(f, "{}", escape(self.printable_string.clone()))
   }
 }
 
-#[inline(always)]
-fn concat_codes(code_string: &mut String, style: &String)
+fn concat_ansi(code_string: &mut String, style: &String)
 {
   if !code_string.is_empty() && !code_string.ends_with(';') {
     code_string.push(';');
@@ -457,20 +453,20 @@ impl StyleBuilder
 
   pub fn foreground(&mut self, color: Color) -> &mut Self
   {
-    concat_codes(&mut self.style.printable_string, &color.fg_code());
+    concat_ansi(&mut self.style.printable_string, &color.fg_code());
     self
   }
 
   pub fn background(&mut self, color: Color) -> &mut Self
   {
-    concat_codes(&mut self.style.printable_string, &color.bg_code());
+    concat_ansi(&mut self.style.printable_string, &color.bg_code());
     self
   }
 
   /// Add a style to text. Can be used multiple times.
   pub fn add_style(&mut self, style: Style) -> &mut Self
   {
-    concat_codes(&mut self.style.printable_string, &style.code());
+    concat_ansi(&mut self.style.printable_string, &style.code());
     self
   }
 
@@ -480,7 +476,7 @@ impl StyleBuilder
                          -> &mut Self
   {
     if is_underline_style_supported() {
-      concat_codes(&mut self.style.printable_string, &underline_style.code());
+      concat_ansi(&mut self.style.printable_string, &underline_style.code());
     }
     self
   }
@@ -489,8 +485,7 @@ impl StyleBuilder
   pub fn underline_color(&mut self, underline_color: Color) -> &mut Self
   {
     if is_underline_style_supported() {
-      concat_codes(&mut self.style.printable_string,
-                   &underline_color.ul_code());
+      concat_ansi(&mut self.style.printable_string, &underline_color.ul_code());
     }
     self
   }
