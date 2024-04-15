@@ -215,10 +215,11 @@ fn parse_arg<Args>(arg: &String,
     // Linear search over the provided flags vector.
     for (search_flag_kind, search_flag_names) in &mut *flags {
       for search_flag_name in search_flag_names {
-        // search_flag_name either looks like --flag or -f. arg_flag is a long
-        // flag, we need to compare it to the search_flag_name string.
-        // Otherwise, it's a single character out of the list, that looks like
-        // `-vAsn`. So, check if short flag ends with that character.
+        // When searching for a flag, search_flag_name can be either in the long
+        // format (--flag) or short format (-f). If the argument is a long flag,
+        // it should be compared to the entire search flag name string. If it's
+        // a short flag, and if the search_flag_name is also a short flag, check
+        // if it ends with ch.
         if is_long && arg_flag == *search_flag_name {
           found_long = true;
         } else if !is_long &&
@@ -298,8 +299,8 @@ fn parse_arg<Args>(arg: &String,
       break;
     }
     if is_long {
-      let error =
-        FlagError { error_type: FlagErrorType::Unknown, flag: arg.to_string() };
+      let error = FlagError { error_type: FlagErrorType::Unknown,
+                              flag: arg_flag.to_string() };
       return Err(error);
     }
 
