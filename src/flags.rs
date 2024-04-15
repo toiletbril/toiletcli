@@ -361,7 +361,7 @@ pub fn parse_flags<Args>(args: &mut Args,
       ignore_rest = true;
       continue;
     }
-    if ignore_rest || !parse_arg(&arg, args, flags)? {
+    if ignore_rest || arg == "-" || !parse_arg(&arg, args, flags)? {
       parsed_arguments.push(arg);
     }
   }
