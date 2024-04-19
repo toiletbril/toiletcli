@@ -11,8 +11,9 @@
 //! The intended usage of flags which take a value is `-k <value>`/`-k=<value>`,
 //! with a key `-k` and a value of `<value>`.
 //!
-//! After encountering a special flag `--`, the rest of the input will be
-//! treated as arguments.
+//! When parsing whole input, a special flag `--` will cause the rest of the
+//! input to be treated as arguments, ignoring the `--` itself. When parsing
+//! only until a subcommand, `--` will be treated as an argument.
 
 use std::error::Error;
 use std::fmt;
@@ -129,14 +130,14 @@ pub type Flag<'a> = (FlagType<'a>, Vec<&'a str>);
 /// ```
 #[macro_export]
 macro_rules! flags {
-    ($($name:ident: $ty:ident, [$($strings:tt)*]),*) => {
-        {
-            $($name = Default::default();)*
-            let mut flags = vec![];
-            $(flags.push((FlagType::$ty(&mut $name), vec![$($strings)*]));)*
-            flags
-        }
-    };
+  ($($name:ident: $ty:ident, [$($strings:tt)*]),*) => {
+    {
+      $($name = Default::default();)*
+      let mut flags = vec![];
+      $(flags.push((FlagType::$ty(&mut $name), vec![$($strings)*]));)*
+      flags
+    }
+  };
 }
 
 // Check flags in flag array for malformed flags in debug builds.
@@ -295,10 +296,10 @@ fn parse_arg<Args>(arg: &String,
         }
       }
     }
+
     if found_long {
       break;
-    }
-    if is_long {
+    } else if is_long {
       let error = FlagError { error_type: FlagErrorType::Unknown,
                               flag: arg_flag.to_string() };
       return Err(error);
@@ -361,6 +362,7 @@ pub fn parse_flags<Args>(args: &mut Args,
       ignore_rest = true;
       continue;
     }
+
     // Treat '-' as an argument, otherwise try to parse a flag.
     if ignore_rest || arg == "-" || !parse_arg(&arg, args, flags)? {
       parsed_arguments.push(arg);
@@ -422,12 +424,8 @@ pub fn parse_flags_until_subcommand<Args>(args: &mut Args,
   check_flags(flags);
 
   while let Some(arg) = args.next() {
-    // Return the next argument if we encountered '--'.
-    if arg == "--" {
-      return Ok(args.next().unwrap_or("".to_string()));
-    }
-    // Treat '-' as an argument, otherwise try to parse a flag.
-    if arg == "-" || !parse_arg(&arg, args, flags)? {
+    // Treat '-'/'--' as arguments, otherwise try to parse a flag.
+    if arg == "-" || arg == "--" || !parse_arg(&arg, args, flags)? {
       return Ok(arg);
     }
   }
@@ -479,6 +477,30 @@ mod tests
 
     assert_eq!(parsed_args.unwrap(),
                vec!["program", "argument", "-file", "hello!", "-rrrr"]);
+    assert_eq!(v, 1);
+    assert_eq!(r, 2);
+  }
+
+  #[test]
+  fn flag_everything_after_subcommand()
+  {
+    let argv = vec!["-v", "-rr", "--", "argument"];
+    let mut args = argv.iter().map(|x| x.to_string());
+
+    let mut v;
+    let mut r;
+
+    let mut flags = flags![
+        v: RepeatFlag, ["-v"],
+        r: RepeatFlag, ["-r"]
+    ];
+
+    let subcommand = parse_flags_until_subcommand(&mut args, &mut flags);
+    assert_eq!(&subcommand.unwrap(), "--");
+
+    let parsed_args = parse_flags(&mut args, &mut flags);
+
+    assert_eq!(parsed_args.unwrap(), vec!["argument"]);
     assert_eq!(v, 1);
     assert_eq!(r, 2);
   }
