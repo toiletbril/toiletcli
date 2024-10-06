@@ -242,7 +242,7 @@ fn parse_arg<Args>(arg: &String,
 
         match search_flag_kind {
           FlagType::BoolFlag(value) => {
-            // A value with a boolean flag? Phew.
+            // Prohibit specifying a value with a boolean flag.
             if arg_val.is_some() {
               let flag_name = if !is_long {
                 format!("-{}", ch)
@@ -256,6 +256,22 @@ fn parse_arg<Args>(arg: &String,
             }
             **value = true;
             break;
+          }
+
+          FlagType::RepeatFlag(value) => {
+            // Prohibit specifying a value with a repeat flag too.
+            if arg_val.is_some() {
+              let flag_name = if !is_long {
+                format!("-{}", ch)
+              } else {
+                arg_flag.to_string()
+              };
+              let error = FlagError { error_type:
+                                        FlagErrorType::ExtraValueProvided,
+                                      flag: flag_name };
+              return Err(error);
+            }
+            **value += 1;
           }
 
           FlagType::StringFlag(value) => {
@@ -272,10 +288,6 @@ fn parse_arg<Args>(arg: &String,
             if !is_long {
               last_short_flag_with_value = Some(ch);
             }
-          }
-
-          FlagType::RepeatFlag(value) => {
-            **value += 1;
           }
 
           FlagType::ManyFlag(vec) => {
@@ -769,6 +781,50 @@ mod tests
     let mut s = false;
 
     let mut flags = vec![(FlagType::BoolFlag(&mut s), vec!["-s"])];
+
+    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  #[cfg(debug_assertions)]
+  fn parse_flags_extra_value_combine()
+  {
+    let args_vector = vec!["program".to_string(), "-rs=test".to_string()];
+
+    let mut s = false;
+    let mut r = 0;
+
+    let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"]),
+                         (FlagType::BoolFlag(&mut s), vec!["-s"])];
+
+    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  #[cfg(debug_assertions)]
+  fn parse_flags_extra_value_repeat()
+  {
+    let args_vector = vec!["program".to_string(), "-r=test".to_string()];
+
+    let mut r = 0;
+
+    let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"])];
+
+    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  #[cfg(debug_assertions)]
+  fn parse_flags_extra_value_repeat_2()
+  {
+    let args_vector = vec!["program".to_string(), "-rr=test".to_string()];
+
+    let mut r = 0;
+
+    let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"])];
 
     parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
   }

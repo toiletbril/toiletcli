@@ -46,9 +46,10 @@ pub fn is_underline_style_supported() -> bool
         false
       };
 
-      UNDERLINE_SUPPORTED_INIT.call_once(|| {
-                                UNDERLINE_SUPPORTED = Some(is_supported);
-                              });
+      (*(&raw mut UNDERLINE_SUPPORTED_INIT)).call_once(|| {
+                                              UNDERLINE_SUPPORTED =
+                                                Some(is_supported);
+                                            });
 
       is_supported
     }
@@ -56,6 +57,7 @@ pub fn is_underline_style_supported() -> bool
 }
 
 static mut USE_COLORS: Option<bool> = None;
+#[allow(dead_code)]
 static mut USE_COLORS_INIT: Once = Once::new();
 
 /// If this function returns `false`, colors will be replaced with nothing.
@@ -76,9 +78,10 @@ pub fn should_use_colors() -> bool
 
       let should_use_colors = is_atty && use_color;
 
-      USE_COLORS_INIT.call_once(|| {
-                       USE_COLORS = Some(should_use_colors);
-                     });
+      (*(&raw mut UNDERLINE_SUPPORTED_INIT)).call_once(|| {
+                                              USE_COLORS =
+                                                Some(should_use_colors);
+                                            });
 
       should_use_colors
     }
