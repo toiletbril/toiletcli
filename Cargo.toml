@@ -31,6 +31,10 @@ name = "cat"
 path = "examples/cat.rs"
 
 [[example]]
+name = "escapes"
+path = "examples/escapes.rs"
+
+[[example]]
 name = "flags"
 path = "examples/flags.rs"
 
