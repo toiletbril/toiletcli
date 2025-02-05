@@ -206,12 +206,12 @@ fn parse_arg<Args>(arg: &String,
 
   let mut found_long = false;
   let mut last_short_flag_with_value: Option<char> = None;
-  let mut first_short_flag = true;
+  let mut is_first_short_flag = true;
 
   // This iterates the characters of the arg, in case this arg consists of
   // several short flags. If this is a long flag, we'll just break out after the
   // first loop.
-  for ch in arg_chars {
+  while let Some(ch) = arg_chars.next() {
     let mut found_short = false;
 
     // Linear search over the provided flags vector.
@@ -240,9 +240,6 @@ fn parse_arg<Args>(arg: &String,
                                   flag: format!("-{}", first) };
           return Err(error);
         }
-        if !is_long {
-          first_short_flag = false;
-        };
 
         match search_flag_kind {
           FlagType::BoolFlag(value) => {
@@ -259,7 +256,6 @@ fn parse_arg<Args>(arg: &String,
               return Err(error);
             }
             **value = true;
-            break;
           }
 
           FlagType::RepeatFlag(value) => {
@@ -279,53 +275,71 @@ fn parse_arg<Args>(arg: &String,
           }
 
           FlagType::StringFlag(value) => {
-            if let Some(v) = arg_val {
-              **value = v.to_string();
+            let v = if let Some(v) = arg_val {
+              Some(v.to_string())
             } else if let Some(next_arg) = args.next() {
-              value.clone_from(&next_arg);
+              Some(next_arg.clone())
             } else {
+              None
+            };
+
+            if v.is_none() || (!is_long && arg_chars.peek().is_some()) {
               let flag_name = if !is_long {
                 format!("-{}", ch)
               } else {
                 arg_flag.to_string()
               };
-              let error = FlagError { error_type: if first_short_flag {
-                                        FlagErrorType::NoValueProvided
-                                      } else {
-                                        FlagErrorType::CannotCombine
-                                      },
-                                      flag: flag_name };
-              return Err(error);
+              let error_type =
+                if is_first_short_flag && arg_chars.peek().is_none() {
+                  FlagErrorType::NoValueProvided
+                } else {
+                  FlagErrorType::CannotCombine
+                };
+              return Err(FlagError { error_type, flag: flag_name });
             }
+
+            **value = v.expect("unreachable");
+
             if !is_long {
               last_short_flag_with_value = Some(ch);
             }
           }
 
           FlagType::ManyFlag(vec) => {
-            if let Some(v) = arg_val {
-              vec.push(v.to_string());
+            let v = if let Some(v) = arg_val {
+              Some(v.to_string())
             } else if let Some(next_arg) = args.next() {
-              vec.push(next_arg.clone());
+              Some(next_arg.clone())
             } else {
+              None
+            };
+
+            if v.is_none() || (!is_long && arg_chars.peek().is_some()) {
               let flag_name = if !is_long {
                 format!("-{}", ch)
               } else {
                 arg_flag.to_string()
               };
-              let error = FlagError { error_type: if first_short_flag {
-                                        FlagErrorType::NoValueProvided
-                                      } else {
-                                        FlagErrorType::CannotCombine
-                                      },
-                                      flag: flag_name };
-              return Err(error);
+              let error_type =
+                if is_first_short_flag && arg_chars.peek().is_none() {
+                  FlagErrorType::NoValueProvided
+                } else {
+                  FlagErrorType::CannotCombine
+                };
+              return Err(FlagError { error_type, flag: flag_name });
             }
+
+            vec.push(v.expect("unreachable"));
+
             if !is_long {
               last_short_flag_with_value = Some(ch);
             }
           }
         }
+
+        if !is_long {
+          is_first_short_flag = false;
+        };
       }
     }
 
@@ -801,20 +815,108 @@ mod tests
   }
 
   #[test]
-  #[should_panic]
-  #[cfg(debug_assertions)]
-  fn parse_flags_cant_combine()
+  fn parse_flags_string_no_value()
   {
-    let args_vector =
-      vec!["program".to_string(), "-sa".to_string(), "test".to_string()];
+    let args_vector = vec!["program".to_string(), "-s".to_string()];
 
     let mut s = String::new();
-    let mut a = false;
 
-    let mut flags = vec![(FlagType::StringFlag(&mut s), vec!["-s"]),
-                         (FlagType::BoolFlag(&mut a), vec!["-a"])];
+    let mut flags = vec![(FlagType::StringFlag(&mut s), vec!["-s"])];
 
-    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::NoValueProvided);
+  }
+
+  #[test]
+  fn parse_flags_string_no_value_combine_order()
+  {
+    let args_vector = vec!["program".to_string(), "-bs".to_string()];
+
+    let mut s;
+    let mut b;
+
+    let mut flags = flags![
+        s: StringFlag, ["-s"],
+        b: BoolFlag,   ["-b"]
+    ];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::CannotCombine);
+  }
+
+  #[test]
+  fn parse_flags_string_no_value_combine_order_2()
+  {
+    let args_vector = vec!["program".to_string(), "-sb".to_string()];
+
+    let mut s;
+    let mut b;
+
+    let mut flags = flags![
+        s: StringFlag, ["-s"],
+        b: BoolFlag,   ["-b"]
+    ];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::CannotCombine);
+  }
+
+  #[test]
+  fn parse_flags_string_no_value_combine_order_many_3()
+  {
+    let args_vector = vec!["program".to_string(), "-cbm".to_string()];
+
+    let mut s;
+    let mut b;
+    let mut c;
+
+    let mut flags = flags![
+        s: ManyFlag, ["-m"],
+        b: BoolFlag, ["-b"],
+        c: BoolFlag, ["-c"]
+    ];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-m");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::CannotCombine);
+  }
+
+  #[test]
+  fn parse_flags_string_no_value_combine_order_many_4()
+  {
+    let args_vector = vec!["program".to_string(), "-cmb".to_string()];
+
+    let mut s;
+    let mut b;
+    let mut c;
+
+    let mut flags = flags![
+        s: ManyFlag, ["-m"],
+        b: BoolFlag, ["-b"],
+        c: BoolFlag, ["-c"]
+    ];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-m");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::CannotCombine);
   }
 
   #[test]

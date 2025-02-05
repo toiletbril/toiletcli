@@ -3,7 +3,7 @@ name    = "toiletcli"
 readme  = "README.md"
 authors = ["toiletbril"]
 license = "MIT"
-version = "0.12.2"
+version = "0.12.3"
 edition = "2021"
 
 repository  = "https://github.com/toiletbril/toiletcli"
