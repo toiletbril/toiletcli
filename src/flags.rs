@@ -49,7 +49,7 @@ pub enum FlagType<'a>
   RepeatFlag(&'a mut usize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FlagErrorType
 {
   CannotCombine,
@@ -206,6 +206,7 @@ fn parse_arg<Args>(arg: &String,
 
   let mut found_long = false;
   let mut last_short_flag_with_value: Option<char> = None;
+  let mut first_short_flag = true;
 
   // This iterates the characters of the arg, in case this arg consists of
   // several short flags. If this is a long flag, we'll just break out after the
@@ -239,6 +240,9 @@ fn parse_arg<Args>(arg: &String,
                                   flag: format!("-{}", first) };
           return Err(error);
         }
+        if !is_long {
+          first_short_flag = false;
+        };
 
         match search_flag_kind {
           FlagType::BoolFlag(value) => {
@@ -280,9 +284,17 @@ fn parse_arg<Args>(arg: &String,
             } else if let Some(next_arg) = args.next() {
               value.clone_from(&next_arg);
             } else {
-              let error = FlagError { error_type:
-                                        FlagErrorType::NoValueProvided,
-                                      flag: arg_flag.to_string() };
+              let flag_name = if !is_long {
+                format!("-{}", ch)
+              } else {
+                arg_flag.to_string()
+              };
+              let error = FlagError { error_type: if first_short_flag {
+                                        FlagErrorType::NoValueProvided
+                                      } else {
+                                        FlagErrorType::CannotCombine
+                                      },
+                                      flag: flag_name };
               return Err(error);
             }
             if !is_long {
@@ -296,9 +308,17 @@ fn parse_arg<Args>(arg: &String,
             } else if let Some(next_arg) = args.next() {
               vec.push(next_arg.clone());
             } else {
-              let error = FlagError { error_type:
-                                        FlagErrorType::NoValueProvided,
-                                      flag: arg_flag.to_string() };
+              let flag_name = if !is_long {
+                format!("-{}", ch)
+              } else {
+                arg_flag.to_string()
+              };
+              let error = FlagError { error_type: if first_short_flag {
+                                        FlagErrorType::NoValueProvided
+                                      } else {
+                                        FlagErrorType::CannotCombine
+                                      },
+                                      flag: flag_name };
               return Err(error);
             }
             if !is_long {
@@ -711,6 +731,32 @@ mod tests
   }
 
   #[test]
+  fn parse_flags_no_value_to_short_combined()
+  {
+    let argv = vec!["program", "-sb"];
+    let mut args = argv.iter().map(|x| x.to_string());
+
+    let program_name = args.next().unwrap();
+
+    assert_eq!(program_name, "program".to_string());
+
+    let mut v;
+    let mut d;
+
+    let mut main_flags = flags![
+        v: StringFlag, ["-s"],
+        d: BoolFlag,   ["-b"]
+    ];
+
+    let err = parse_flags(&mut args, &mut main_flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::CannotCombine);
+  }
+
+  #[test]
   #[should_panic]
   #[cfg(debug_assertions)]
   fn parse_flags_malformed()
@@ -772,8 +818,6 @@ mod tests
   }
 
   #[test]
-  #[should_panic]
-  #[cfg(debug_assertions)]
   fn parse_flags_extra_value()
   {
     let args_vector = vec!["program".to_string(), "-s=test".to_string()];
@@ -782,12 +826,15 @@ mod tests
 
     let mut flags = vec![(FlagType::BoolFlag(&mut s), vec!["-s"])];
 
-    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::ExtraValueProvided);
   }
 
   #[test]
-  #[should_panic]
-  #[cfg(debug_assertions)]
   fn parse_flags_extra_value_combine()
   {
     let args_vector = vec!["program".to_string(), "-rs=test".to_string()];
@@ -798,12 +845,15 @@ mod tests
     let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"]),
                          (FlagType::BoolFlag(&mut s), vec!["-s"])];
 
-    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-r");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::ExtraValueProvided);
   }
 
   #[test]
-  #[should_panic]
-  #[cfg(debug_assertions)]
   fn parse_flags_extra_value_repeat()
   {
     let args_vector = vec!["program".to_string(), "-r=test".to_string()];
@@ -812,12 +862,15 @@ mod tests
 
     let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"])];
 
-    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-r");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::ExtraValueProvided);
   }
 
   #[test]
-  #[should_panic]
-  #[cfg(debug_assertions)]
   fn parse_flags_extra_value_repeat_2()
   {
     let args_vector = vec!["program".to_string(), "-rr=test".to_string()];
@@ -826,6 +879,11 @@ mod tests
 
     let mut flags = vec![(FlagType::RepeatFlag(&mut r), vec!["-r"])];
 
-    parse_flags(&mut args_vector.into_iter(), &mut flags).unwrap();
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "-r");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::ExtraValueProvided);
   }
 }
