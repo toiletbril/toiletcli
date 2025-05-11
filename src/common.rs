@@ -31,6 +31,7 @@ static mut UNDERLINE_SUPPORTED_INIT: Once = Once::new();
 
 const SUPPORTED_TERMINALS: &[&str] =
   &["vte", "kitty", "mintty", "iterm2", "alacritty" /* since 0.12.0 */];
+const SUPPORTED_TERMS: &[&str] = &["xterm-ghostty"];
 
 /// Returns `true` if current `$TERMINAL` supports underline styling.
 pub fn is_underline_style_supported() -> bool
@@ -42,6 +43,10 @@ pub fn is_underline_style_supported() -> bool
       let is_supported = if let Ok(terminal) = std::env::var("TERMINAL") {
         SUPPORTED_TERMINALS.iter()
                            .any(|&supported| terminal.contains(supported))
+      } else {
+        false
+      } || if let Ok(term) = std::env::var("TERM") {
+        SUPPORTED_TERMS.iter().any(|&supported| term.contains(supported))
       } else {
         false
       };
