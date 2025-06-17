@@ -289,12 +289,15 @@ fn parse_arg<Args>(arg: &String,
               } else {
                 arg_flag.to_string()
               };
-              let error_type =
-                if is_first_short_flag && arg_chars.peek().is_none() {
-                  FlagErrorType::NoValueProvided
-                } else {
-                  FlagErrorType::CannotCombine
-                };
+              let no_short_arg =
+                is_first_short_flag && arg_chars.peek().is_none();
+              let no_long_arg = is_long && arg_val.is_none();
+              let error_type = if no_short_arg || no_long_arg {
+                FlagErrorType::NoValueProvided
+              } else {
+                FlagErrorType::CannotCombine
+              };
+              eprintln!("{error_type:?}");
               return Err(FlagError { error_type, flag: flag_name });
             }
 
@@ -320,12 +323,14 @@ fn parse_arg<Args>(arg: &String,
               } else {
                 arg_flag.to_string()
               };
-              let error_type =
-                if is_first_short_flag && arg_chars.peek().is_none() {
-                  FlagErrorType::NoValueProvided
-                } else {
-                  FlagErrorType::CannotCombine
-                };
+              let no_short_arg =
+                is_first_short_flag && arg_chars.peek().is_none();
+              let no_long_arg = is_long && arg_val.is_none();
+              let error_type = if no_short_arg || no_long_arg {
+                FlagErrorType::NoValueProvided
+              } else {
+                FlagErrorType::CannotCombine
+              };
               return Err(FlagError { error_type, flag: flag_name });
             }
 
@@ -827,6 +832,40 @@ mod tests
 
     assert!(err.is_err());
     assert!(err.as_ref().unwrap_err().flag == "-s");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::NoValueProvided);
+  }
+
+  #[test]
+  fn parse_flags_string_no_value_long()
+  {
+    let args_vector = vec!["program".to_string(), "--str".to_string()];
+
+    let mut s = String::new();
+
+    let mut flags = vec![(FlagType::StringFlag(&mut s), vec!["--str"])];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "--str");
+    assert!(err.as_ref().unwrap_err().error_type ==
+            FlagErrorType::NoValueProvided);
+  }
+
+  #[test]
+  fn parse_flags_many_no_value_long()
+  {
+    let args_vector = vec!["program".to_string(), "--many".to_string()];
+
+    let mut m = vec![];
+
+    let mut flags = vec![(FlagType::ManyFlag(&mut m), vec!["--many"])];
+
+    let err = parse_flags(&mut args_vector.into_iter(), &mut flags);
+
+    assert!(err.is_err());
+    assert!(err.as_ref().unwrap_err().flag == "--many");
     assert!(err.as_ref().unwrap_err().error_type ==
             FlagErrorType::NoValueProvided);
   }
